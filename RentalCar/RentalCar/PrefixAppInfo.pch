@@ -1,0 +1,123 @@
+//
+//  AppInfo.pch
+//  RentalCar
+//
+//  Created by hu on 17/3/5.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#ifndef PrefixAppInfo
+#define PrefixAppInfo
+
+
+#define IS_IOS_7 ([[[UIDevice currentDevice] systemVersion] floatValue]>=7.0)
+#define IS_IOS_8 ([[[UIDevice currentDevice] systemVersion] floatValue]>=8.0)
+#define IS_IOS_10 ([[[UIDevice currentDevice] systemVersion] floatValue]>=10.0)
+#define IS_IOS_11 ([[[UIDevice currentDevice] systemVersion] floatValue]>=11.0)
+#define IS_IPHONE_5 ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )568 ) < DBL_EPSILON )
+
+#define IS_IPHONE_4 ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )480 ) < DBL_EPSILON )
+
+#define IS_IPhone6 (667 == [[UIScreen mainScreen] bounds].size.height ? YES : NO)
+
+#define IS_IPhone6plus (736 == [[UIScreen mainScreen] bounds].size.height ? YES : NO)
+
+#define IS_IPhoneX ([NSStringFromCGSize([UIScreen mainScreen].bounds.size)  isEqualToString:@"{375, 812}"])
+
+#define kVersion6 [[UIDevice currentDevice].systemVersion floatValue] < 6.0
+
+#define SYSTEM_VERSION_LESS_THAN(v) ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
+
+#define MainWindow [[[UIApplication sharedApplication] delegate] window]
+
+// 屏幕宽高
+#define kScreenHeight   [[UIScreen mainScreen] bounds].size.height
+#define kScreenWidth    [[UIScreen mainScreen] bounds].size.width
+
+
+/**
+ iOS11之前导航栏默认高度为64pt(这里高度指statusBar + NavigationBar)
+ iOS11之后如果设置了prefersLargeTitles = YES则为96pt，默认情况下还是64pt，但在iPhoneX上由于刘海的出现statusBar由以前的20pt变成了44pt，所以iPhoneX上高度变为88pt.
+ */
+static inline CGFloat zh_statusBarHeight () { // 默认情况下状态栏高度
+    return [NSStringFromCGSize([UIScreen mainScreen].bounds.size) isEqualToString:@"{375, 812}"] ? 44 : 20;
+}
+
+#define StatusBarHeight zh_statusBarHeight () //状态栏的高度
+
+// 获取ios导航栏的实际的高
+#define NavHeight (self.navigationController.navigationBar.frame.size.height)
+// 获取ios导航栏和状态栏的实际的高之和
+#define NVBarAndStatusBarHeight (44+StatusBarHeight)
+
+// 控件宽高、字体适配
+#define autoScaleW(width) [(AppDelegate *)[UIApplication sharedApplication].delegate autoScaleW:width]
+#define autoScaleH(height) [(AppDelegate *)[UIApplication sharedApplication].delegate autoScaleH:height]
+
+// 系统版本号
+#define kSystemVersion  [[[UIDevice currentDevice] systemVersion] floatValue]
+
+// 设备uuid
+#define kDeviceUuidString     [[UIDevice currentDevice] identifierForVendor].UUIDString
+
+#ifdef DEBUG
+#define KOnline NO
+
+#else
+#define KOnline YES
+#endif
+
+
+
+/**
+ *  完美解决Xcode NSLog打印不全的宏 亲测目前支持到8.2bate版
+ */
+#ifdef DEBUG
+#define NSLog(...) printf("%f %s\n",[[NSDate date]timeIntervalSince1970],[[NSString stringWithFormat:__VA_ARGS__]UTF8String]);
+#else
+#define NSLog(format, ...)
+#endif
+
+//deLog方法
+#ifdef DEBUG
+#define debugLog(...) NSLog(__VA_ARGS__)
+#define debugMethod() NSLog(@"%s", __func__)
+#else
+#define debugLog(...)
+#define debugMethod()
+#endif
+
+#ifndef weakify
+#if DEBUG
+#if __has_feature(objc_arc)
+#define weakify(object) autoreleasepool{} __weak __typeof__(object) weak##_##object = object;
+#else
+#define weakify(object) autoreleasepool{} __block __typeof__(object) block##_##object = object;
+#endif
+#else
+#if __has_feature(objc_arc)
+#define weakify(object) try{} @finally{} {} __weak __typeof__(object) weak##_##object = object;
+#else
+#define weakify(object) try{} @finally{} {} __block __typeof__(object) block##_##object = object;
+#endif
+#endif
+#endif
+
+#ifndef strongify
+#if DEBUG
+#if __has_feature(objc_arc)
+#define strongify(object) autoreleasepool{} __typeof__(object) object = weak##_##object;
+#else
+#define strongify(object) autoreleasepool{} __typeof__(object) object = block##_##object;
+#endif
+#else
+#if __has_feature(objc_arc)
+#define strongify(object) try{} @finally{} __typeof__(object) object = weak##_##object;
+#else
+#define strongify(object) try{} @finally{} __typeof__(object) object = block##_##object;
+#endif
+#endif
+#endif
+
+
+#endif /* PrefixAppInfo */

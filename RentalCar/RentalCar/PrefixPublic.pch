@@ -1,0 +1,89 @@
+//
+//  PrefixPublic.pch
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/17.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#ifndef PrefixPublic_pch
+#define PrefixPublic_pch
+
+/******************************通知****************************/
+
+#define kLoginSuccNotification  @"kLoginSuccNotification"
+#define kLoginFailNotification  @"kLoginFailNotification"
+#define kLogoutSuccNotification  @"kLogoutSuccNotification"
+#define kGetUserInfoNotification  @"kGetUserInfoNotification"
+#define kPostUserInfoNotification  @"kPostUserInfoNotification"
+
+/******************************颜色****************************/
+
+//0x25D880
+#define UIColorFromARGB(value,a) [UIColor colorWithRed:((float)((value & 0xFF0000) >> 16))/255.0 green:((float)((value & 0xFF00) >> 8))/255.0 blue:((float)(value & 0xFF))/255.0 alpha:a] //a:透明度
+#define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
+//rgba
+#define UIColorFromValue(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1.0]
+#define UIColorFromValueAlpha(r,g,b,a) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:a]
+
+// 背景色
+#define kBgColor        [UIColor colorWithRed:250/255.0 green:250/255.0 blue:250/255.0 alpha:1.0]
+// 主题色
+#define kBlueColor      UIColorFromRGB(0x25D880)
+// 灰线
+#define kLineColor      [UIColor colorWithRed:232/255.0 green:232/255.0 blue:232/255.0 alpha:1.0]
+// 阴影色
+#define kShadowColor    UIColorFromRGB(0x24709C)
+// 标题颜色
+#define kTitleColor     UIColorFromRGB(0x030303)
+
+// 空闲车辆颜色
+#define kCarColor_Kongxian  UIColorFromRGB(0x41B40E)
+// 预约车辆颜色
+#define kCarColor_Yuyue     UIColorFromRGB(0x5E86D7)
+// 租赁车辆颜色
+#define kCarColor_Zulin     UIColorFromRGB(0xDC8A09)
+// 运维车辆颜色
+#define kCarColor_Yunwei    UIColorFromRGB(0xCC23D7)
+// 亏电车辆颜色
+#define kCarColor_Kuidian   UIColorFromRGB(0xE7C62B)
+// 故障车辆颜色
+#define kCarColor_Guzhang   UIColorFromRGB(0xED2828)
+// 离线车辆颜色
+#define kCarColor_Lixian    UIColorFromRGB(0x9B9B9B)
+
+
+/******************************尺寸****************************/
+
+// 输入框高度
+#define kTextFieldH 48.0
+
+//通用的左右间距
+#define kPaddingLeftRight 12.0
+
+// 提交、下一步按钮高度
+#define kButH 35.0
+
+
+/******************************字体****************************/
+
+// 标题字体大小
+#define kTitleFont      [UIFont systemFontOfSize:17]
+
+// 自定义字体
+#define kSize(x)            15.0+(x)
+#define kArialSize(x)       [UIFont fontWithName:@"Arial" size:kSize(x)]
+#define kAvantiSize(x)      [UIFont fontWithName:@"Avanti" size:kSize(x)]
+#define kAvantiBoldSize(x)  [UIFont fontWithName:@"AvantiBold" size:autoScaleW(kSize(x))]
+/******************************信息****************************/
+#define UploadLocationTime 60
+#define ServicePhone @"400-017-1818" //客服电话
+#define MemberAgreementUrl @"http://rent.evcoming.com/mc/member_agreement.html" //会员协议
+#define FcaeRecognitionUrl @"http://rent.evcoming.com/mc/guide/guide-q12.html" //面部识别失败
+#define ProIdUrl @"http://rent.evcoming.com/mc/guide/guide-q11.html" //扫描不成功
+
+#define CarStatus @[@"0",@"1",@"2",@"3"]  //新增 0：可租，1：离线，2：亏电，3：运维 【字段不传为可租】
+
+
+
+#endif /* PrefixPublic_pch */

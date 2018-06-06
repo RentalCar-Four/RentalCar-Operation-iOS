@@ -1,0 +1,33 @@
+platform :ios,'8.0'
+
+inhibit_all_warnings!
+source 'https://github.com/CocoaPods/Specs.git'
+
+def pods
+  pod 'SDWebImage', '~> 3.7.1'
+  pod 'IQKeyboardManager', '~> 3.2.3'
+  pod 'SVProgressHUD', '~> 1.1.3'
+  pod 'MJRefresh', '~> 3.1.0'
+  pod 'BlockAlertsAnd-ActionSheets', '~> 1.0.6'
+  pod 'YYModel'
+  pod 'Masonry'
+  pod 'FXBlurView'
+  pod 'TZImagePickerController'
+  pod 'AFNetworking'
+  pod 'UMengUShare/Social/WeChat'
+  pod 'UMengUShare/Social/QQ'
+  pod 'UMengAnalytics-NO-IDFA'
+  pod 'Reveal-SDK', '~> 4.0', :configurations => ['Debug']
+#  pod 'AMap3DMap-NO-IDFA'
+#  pod 'AMapSearch-NO-IDFA'
+#  pod 'AMapFoundation-NO-IDFA'
+#  pod 'AMapLocation-NO-IDFA'
+#  pod 'AMapNavi-NO-IDFA'
+end
+ target 'RentalCar' do
+
+ pods
+
+end
+
+

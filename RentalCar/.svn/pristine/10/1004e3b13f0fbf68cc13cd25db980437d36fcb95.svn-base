@@ -1,0 +1,34 @@
+//
+//  LeftMenuView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/14.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseView.h"
+#import "HeaderView.h"
+#define titleArr @[@"钱包", @"行程", @"客服",@"",@"关于"]
+
+@protocol LeftMenuDelegate <NSObject>
+
+@optional
+- (void)onClickWithHideLeftMenuEvent; //隐藏菜单
+- (void)onClickWithHeaderViewEvent; //头像点击
+-(void)onDidSelectRowAtIndexPath:(NSIndexPath *)indexPath;//点击cell
+
+@end
+
+@interface LeftMenuView : BaseView
+
+@property (nonatomic,weak) id<LeftMenuDelegate> delegate;
+
+@property (nonatomic,strong) UIView *leftView; //左侧滑菜单
+@property (nonatomic,strong) UIView *shadowView; //侧滑蒙版
+@property (nonatomic,strong) UITableView *leftTableView; //侧滑列表
+@property (nonatomic,assign) BOOL isAnimationOn; //是否开启侧滑动画
+@property (nonatomic,assign) int leftViewShow;
+@property(nonatomic,strong)HeaderView *headView;
+
+
+@end

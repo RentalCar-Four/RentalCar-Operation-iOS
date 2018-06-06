@@ -1,0 +1,80 @@
+//
+//  XDYHomeService.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/7.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseService.h"
+#import "StationItem.h"
+#import "CarItem.h"
+#import "BookingItem.h"
+#import "ScanCarInfoItem.h"
+
+@interface XDYHomeService : BaseService
+
+//获取用户授权状态
+- (void)requestUserAuthState;
+
+//根据城市获取对应的区域
+- (void)requestCityToAreaWithService:(NSDictionary *)param;
+
+//获取区域列表
+- (void)requestGetAreaListWithService;
+
+//获取站点及可租车辆数量请求
+- (void)requestStationForLeaseWithService:(NSDictionary *)param;
+
+//获取站点可租车辆列表
+- (void)requestStationCarListWithService:(NSDictionary *)param;
+
+//获取还车站点
+- (void)requestStationForReturnWithService:(NSDictionary *)param;
+
+//获取已预约车辆
+- (void)requestCarInBookingWithService;
+
+//获取扫码预约车辆
+- (void)requestCarInSearchInfoWithService;
+
+//获取行程中车辆
+- (void)requestCarInLeaseWithService;
+
+//解除预约车辆
+- (void)requestCancelBookingCarWithService:(NSDictionary *)param;
+
+//搜索站点
+- (void)requestSearchStationWithService:(NSDictionary *)param;
+
+//扫码租车获取车辆信息
+- (void)requestSearchCarForLeaseWithService:(NSDictionary *)param;
+
+//获取租车密码
+- (void)requestGetRentPwdService;
+
+//租赁中开关车门
+- (void)requestOpenOrCloseLeaseCarWithService:(NSDictionary *)param;
+
+//还车
+- (void)requestReturnCarWithService:(NSDictionary *)param;
+
+//获取服务电话
+- (void)requestgetServicePhoneWithService;
+
+//获取app版本信息
+- (void)requestgetAppVersionWithService;
+
+//获取还车时检查项
+- (void)requestChekItemForReturnCarWithService:(NSDictionary *)param;
+
+//获取租赁中车辆预估租金
+- (void)requestEstimateLeaseFeeWithService:(NSDictionary *)param;
+
+//请求用户头像
+- (NSString *)requestWithPostDownloadHeadImgWithService:(NSDictionary *)param;
+
+//获取车牌号前2个字符
+- (void)requestGetNumberPlatePrefixWithService;
+
+@end

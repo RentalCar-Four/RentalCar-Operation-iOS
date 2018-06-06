@@ -1,0 +1,31 @@
+//
+//  StationItem.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/9.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "StationItem.h"
+
+@implementation StationItem
+
+- (void)setDistance:(NSString *)distance {
+    
+    int dis = [distance intValue];
+    
+    if (dis>999) {
+        
+        if (dis>10000) {
+            _distance = @">10KM";
+        } else {
+            CGFloat kmValue = (CGFloat)dis/1000;
+            _distance = [NSString stringWithFormat:@"%.1fKM",kmValue];
+        }
+        
+    } else {
+        _distance = [NSString stringWithFormat:@"%0.0dM",dis];
+    }
+}
+
+@end

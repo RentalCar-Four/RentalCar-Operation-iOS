@@ -1,0 +1,29 @@
+//
+//  CarRunningView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/17.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseView.h"
+#import "BookingItem.h"
+
+@protocol CarRunningDelegate <NSObject>
+
+@optional
+- (void)onClickWithFinishRunningEvent:(BookingItem *)item; //结束行程
+- (void)onClickWithReturnCarEvent; //查看还车点
+- (void)onClickWithOpenCarDoorEvent:(BookingItem *)item; //开车门
+- (void)onClickWithCloseCarDoorEvent:(BookingItem *)item; //关车门
+- (void)onClickWithCloseViewEvent:(BookingItem *)item; //关车门
+@end
+
+@interface CarRunningView : BaseView
+
+//代理
+@property (nonatomic,weak) id<CarRunningDelegate> delegate;
+
+@property (nonatomic,retain) BookingItem *item;
+
+@end

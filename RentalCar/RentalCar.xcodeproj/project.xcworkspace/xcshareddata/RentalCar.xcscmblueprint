@@ -1,0 +1,25 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "6325be7b-db2e-9444-b5e8-ed381400c43d++6945",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "6325be7b-db2e-9444-b5e8-ed381400c43d++6945" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "6325be7b-db2e-9444-b5e8-ed381400c43d++6945" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "2B03CFE6-AAE7-408B-A3FD-7ED62A233706",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "6325be7b-db2e-9444-b5e8-ed381400c43d++6945" : "ios_workspace\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "RentalCar",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "company\/RentalCar\/RentalCar.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/122.227.189.53:8443\/svn\/MobileTerminal",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "6325be7b-db2e-9444-b5e8-ed381400c43d++6945"
+    }
+  ]
+}

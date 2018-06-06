@@ -1,0 +1,23 @@
+//
+//  SignKeyUtil.h
+//  RentalCar
+//
+//  Created by hu on 17/3/3.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface SignKeyUtil : NSObject
+
+
++ (NSString *)getNonceString;
+
++ (NSString *)createGetSignUrl:(NSString *)url andSecret:(NSString *)secretKey;
+
+
++ (NSString *)createPostSignUrl:(NSString *)url andSecret:(NSString *)secretKey;
+
+
+
+@end

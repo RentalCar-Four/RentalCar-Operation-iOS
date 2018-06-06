@@ -1,0 +1,23 @@
+//
+//  PrefixKey.pch
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/17.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#ifndef PrefixKey_pch
+#define PrefixKey_pch
+
+// 高德地图key
+#define kMapKey         @"7bb3696f1a2d73bff8132e46a1fcd250"
+
+// 高德地图默认Level
+#define kZoomLevel      17
+
+// 网络请求key
+#define kSignKey        @"ghOwfR7Wz44cbKU93KVSxwYXPGloNu"
+#define kNonceStr       [SignKeyUtil getNonceString]
+
+
+#endif /* PrefixKey_pch */

@@ -1,0 +1,41 @@
+//
+//  CarShowView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/15.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+/**
+ *  展示车View
+ *
+ */
+
+#import "BaseView.h"
+#import <MAMapKit/MAMapKit.h>
+@class CarItem;
+@class StationItem;
+
+@protocol CarShowDelegate <NSObject>
+
+@optional
+- (void)onClickWithUseCarEvent:(CarItem *)item;
+- (void)onClickWithCarPriceRuleEvent:(CarItem *)item;
+
+@end
+
+@interface CarShowView : BaseView
+
+//数据源
+@property (nonatomic,strong) StationItem *stationItem;
+@property (nonatomic,strong) NSMutableArray *carItems;
+@property (nonatomic,assign) CLLocationCoordinate2D userLoc;
+
+//代理方法
+@property (nonatomic,weak) id<CarShowDelegate> delegate;
+
+//动画视图
+@property (nonatomic,strong) UIImageView *imgView;
+@property (nonatomic,strong) UIView *carInfoView;
+
+@end

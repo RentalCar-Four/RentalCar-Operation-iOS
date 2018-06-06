@@ -1,0 +1,32 @@
+//
+//  Config.m
+//  RentalCar
+//
+//  Created by hu on 17/3/1.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "Config.h"
+
+
+@implementation Config
+
+
+NSString* domainUrl(){
+    
+    
+    BOOL isOnline = KOnline;
+    
+    NSString *server = [CacherUtil getCacherWithKey:kTestServerKey];
+    if (isOnline || [APPUtil isBlankString:server]) {
+        
+        return @"http://api.evcoming.com:5131/v3/";
+        
+    }else{
+        //return @"http://192.168.2.218:8080/api_app/";//婷婷的服务器地址
+        return @"http://122.227.189.55:8080/app_v3/";
+        //return @"http://192.168.2.201:8080/api_app/";//吴乐的服务器地址
+    }
+}
+
+@end

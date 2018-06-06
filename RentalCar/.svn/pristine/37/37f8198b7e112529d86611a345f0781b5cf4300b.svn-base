@@ -1,0 +1,764 @@
+//
+//  LoginView.m
+//  RentalCar
+//
+//  Created by hu on 17/3/2.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#define kOptionalColor     [UIColor colorWithRed:135/255.0 green:180/255.0 blue:239/255.0 alpha:1.0]
+#define kGrayColor         [UIColor colorFromHexCode:@"#C4C4C4"]
+
+#import "XDYLoginView.h"
+#import "CountDownTimer.h"
+#import "LoginParamItem.h"
+#import "RegularView.h"
+#import "APPUtil.h"
+#import "PhoneRegularUtil.h"
+#import "LoginArealist.h"
+
+
+@interface XDYLoginView()<CountDownTimerDelegate>
+{
+    
+    UIView *coverPhoneView;
+
+    RegularView *phoneField;
+    UIButton *bgValidateView;
+    UIView *placePhoneView;
+    UIView *placeValidateView;
+    UIView *linePhoneView;
+    UIView *lineValidateView;
+    
+    UIView *coverValidateView;
+    UITextField *validateField;
+    UIView *lineValidateBottomView;
+    
+    UIView *checkView;
+    UIImageView *checkBtn;
+    UIButton *checkCoverBtn;
+    UIButton *lableCheck;
+    UIButton *lableOptionl;
+    
+    UIButton *loginBtn;
+    UILabel *errorLable;
+    
+    CountDownTimer *timer;
+    
+    UIView *areaButline;
+    
+    UIView *place3View;
+    UIView *areaView;
+    UITextField *areaField;
+    UIView *areaTopLine;
+    UIView *areaLine;
+    UIButton *areaBtn;
+}
+
+@end
+
+@implementation XDYLoginView
+
+- (instancetype)initWithFrame:(CGRect)frame{
+    
+    if (self = [super initWithFrame:frame]) {
+        
+        [self setUp];
+        [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(doneVule:) name:@"needAreaValue" object:nil];
+    }
+    
+    return  self;
+}
+
+- (void)setUp{
+    
+    timer = [CountDownTimer new];
+    timer.timerDelegate = self;
+    
+    coverPhoneView = [[UIView alloc]init];
+    coverPhoneView.backgroundColor = [UIColor whiteColor];
+
+    [self addSubview:coverPhoneView];
+    
+    
+    placePhoneView = [[UIView alloc]init];
+    [coverPhoneView addSubview:placePhoneView];
+    
+    phoneField = [[RegularView alloc]init];
+    phoneField.keyboardType = UIKeyboardTypeNumberPad;
+    phoneField.borderStyle = UITextBorderStyleNone;
+    phoneField.placeholder = @"输入您的手机号";
+    phoneField.font = kArialSize(0);
+    phoneField.textColor = [UIColor blackColor];
+    phoneField.clearButtonMode = UITextFieldViewModeAlways;
+
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(textFieldEditChanged:)
+                                                name:@"UITextFieldTextDidChangeNotification" object:phoneField];
+    
+    [coverPhoneView addSubview:phoneField];
+    [coverPhoneView bringSubviewToFront:phoneField];
+    
+    bgValidateView = [UIButton buttonWithType:UIButtonTypeCustom];
+    [bgValidateView setTitle:@"获取验证码" forState:UIControlStateNormal];
+    bgValidateView.titleLabel.font = kArialSize(-1);
+    [bgValidateView setBackgroundColor:kBlueColor];
+    [bgValidateView.layer setMasksToBounds:YES];
+    [bgValidateView.layer setCornerRadius:5.0];
+    [bgValidateView setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [bgValidateView addTarget:self action:@selector(onValidateClick) forControlEvents:UIControlEventTouchUpInside];
+    [coverPhoneView addSubview:bgValidateView];
+    [self setViewEnable:bgValidateView and:NO];
+    
+    linePhoneView = [[UIView alloc]init];
+    linePhoneView.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    [coverPhoneView addSubview:linePhoneView];
+    
+    lineValidateView = [[UIView alloc]init];
+    lineValidateView.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    [self addSubview:lineValidateView];
+
+    coverValidateView = [[UIView alloc]init];
+    coverValidateView.backgroundColor = [UIColor whiteColor];
+    [self addSubview:coverValidateView];
+    
+    validateField = [[UITextField alloc]init];
+    validateField.keyboardType = UIKeyboardTypeNumberPad;
+    validateField.borderStyle = UITextBorderStyleNone;
+    validateField.placeholder = @"输入验证码";
+
+    validateField.font = kArialSize(0);
+    validateField.textColor = [UIColor blackColor];
+    validateField.clearButtonMode = UITextFieldViewModeAlways;
+//    validateField.returnKeyType = UIReturnKeyDone;
+
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(textFieldEditChanged:)
+                                                name:@"UITextFieldTextDidChangeNotification" object:validateField];
+
+    [coverValidateView addSubview:validateField];
+    
+//    选择区域
+//    self.areaBut = [[UIButton alloc]init];
+//    [self.areaBut setTitle:@"选择区域" forState:UIControlStateNormal];
+//    [self.areaBut setTitleColor:[UIColor colorWithHexString:@"#57dd9a"] forState:UIControlStateNormal];
+//    [self.areaBut.titleLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:14]];
+//    [self.areaBut setBackgroundColor:[UIColor whiteColor]];
+//    [self.areaBut setTitleEdgeInsets:UIEdgeInsetsMake(0, 0, 0, 0)];
+//    [self.areaBut.titleLabel setTextAlignment:NSTextAlignmentLeft];
+//    [self.areaBut setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
+//    [self.areaBut setBackgroundColor:[UIColor clearColor]];
+//    [self.areaBut setHidden:YES];
+
+    
+//    [self.areaBut addTarget:self action:@selector(onarealist:) forControlEvents:UIControlEventTouchUpInside];
+    
+    areaButline = [[UIView alloc]init];
+    areaButline.backgroundColor = UIColorFromRGB(0xF6F6F6);
+//    [self.areaBut addSubview:areaButline];
+//    
+//    [self addSubview:self.areaBut];
+    
+    lineValidateBottomView = [[UIView alloc]init];
+    lineValidateBottomView.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    [coverValidateView addSubview:lineValidateBottomView];
+
+    placeValidateView = [[UIView alloc]init];
+    [coverValidateView addSubview:placeValidateView];
+    
+    /** 区域 **/
+    areaView = [UIView new];
+    
+    areaView.hidden = YES;
+    areaView.backgroundColor = [UIColor whiteColor];
+    
+    areaField = [UITextField new];
+    areaField.enabled = NO;
+    
+    areaField.placeholder = @"选择地区";
+    
+    UIColor *areaColor = [UIColor colorWithHexString:@"#57dd9a"];
+    [areaField setValue:areaColor forKeyPath:@"_placeholderLabel.textColor"];
+    [areaField setValue:kArialSize(0) forKeyPath:@"_placeholderLabel.font"];
+    
+    areaField.font = kArialSize(0);
+    areaField.textColor = areaColor;
+    
+    areaBtn = [UIButton new];
+    areaBtn.backgroundColor = [UIColor clearColor];
+    [areaBtn addTarget:self action:@selector(onAreaClick:) forControlEvents:UIControlEventTouchUpInside];
+    
+    areaLine = [UIView new];
+    areaLine.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    
+    areaTopLine = [UIView new];
+    areaTopLine.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    
+    [areaView addSubview:areaField];
+    [areaView addSubview:areaBtn];
+    [areaView addSubview:areaTopLine];
+    [areaView addSubview:areaLine];
+    
+    [self addSubview:areaView];
+
+    /** 阅读 **/
+    checkView = [[UIView alloc]init];
+    [self addSubview:checkView];
+    
+    checkCoverBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    checkCoverBtn.backgroundColor = [UIColor clearColor];
+    [checkView addSubview:checkCoverBtn];
+    [checkView bringSubviewToFront:checkCoverBtn];
+    
+    [checkCoverBtn addTarget:self action:@selector(onCheckClick) forControlEvents:UIControlEventTouchUpInside];
+    
+    checkBtn = [[UIImageView alloc]init];
+    checkBtn.tag = 1;
+    checkBtn.image = [UIImage imageNamed:@"icon_AgreeSelect"];
+    [checkView addSubview:checkBtn];
+    
+    lableCheck = [[UIButton alloc]init];
+    [lableCheck setTitle:@"我已阅读并同意" forState:UIControlStateNormal];
+    lableCheck.titleLabel.font = kArialSize(-2);
+    [lableCheck setTitleColor:kGrayColor forState:UIControlStateNormal];
+    [lableCheck addTarget:self action:@selector(onCheckClick) forControlEvents:UIControlEventTouchUpInside];
+    [checkView addSubview:lableCheck];
+    
+    lableOptionl = [[UIButton alloc]init];
+    [lableOptionl setTitle:@"《小灵狗租赁协议》" forState:UIControlStateNormal];
+    lableOptionl.titleLabel.font = kArialSize(-2);
+    [lableOptionl setTitleColor:kOptionalColor forState:UIControlStateNormal];
+    [lableOptionl setTitleColor:kGrayColor forState:UIControlStateHighlighted];
+
+    [lableOptionl addTarget:self action:@selector(onOptionClick) forControlEvents:UIControlEventTouchUpInside];
+    [checkView addSubview:lableOptionl];
+
+    /** 登录 */
+    loginBtn = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    [loginBtn setTitle:@"开始用车" forState:UIControlStateNormal];
+    loginBtn.titleLabel.font = kArialSize(2);
+//    [[APPUtil share] setButtonClickStyle:loginBtn normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(5)];
+    
+    [[APPUtil share]setButtonClickStyle:loginBtn Shadow:YES normalBorderColor:0 selectedBorderColor:0 BorderWidth:0 normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(5)];
+    
+    [loginBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [loginBtn addTarget:self action:@selector(onLoginClick) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:loginBtn];
+    [self setViewEnable:loginBtn and:NO];
+
+    errorLable = [UILabel new];
+    errorLable.font = kArialSize(-4);
+    errorLable.textColor = [UIColor colorFromHexCode:@"#FF3030"];
+    [coverPhoneView addSubview:errorLable];
+    
+}
+
+
+- (void)layoutSubviews{
+    
+    [super layoutSubviews];
+    
+    int navHeight = 64;
+    int validateWidth = 96;
+    int paddingTop = 25;
+    int paddingLeftRight = kPaddingLeftRight;
+    float lHeight = autoScaleH(1);
+    
+    @weakify(self);
+    [self mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        @strongify(self);
+        make.top.mas_equalTo(self.superview.mas_top).offset(navHeight);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(kScreenHeight);
+        
+    }];
+    
+    
+    [coverPhoneView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        @strongify(self);
+        make.top.mas_equalTo(self.mas_top).offset(paddingTop);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(kTextFieldH);
+        
+    }];
+ 
+    
+    [linePhoneView mas_makeConstraints:^(MASConstraintMaker *make) {
+       
+        make.top.mas_equalTo(coverPhoneView.mas_top);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(lHeight);
+        
+    }];
+    
+    [placePhoneView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.centerY.equalTo(coverPhoneView.mas_centerY);
+        make.left.equalTo(coverPhoneView.mas_left);
+        make.size.mas_equalTo(CGSizeMake(paddingLeftRight, kTextFieldH));
+        
+    }];
+    
+    /***输入号码****/
+    [phoneField mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.centerY.equalTo(coverPhoneView.mas_centerY);
+        make.left.equalTo(placePhoneView.mas_right);
+        make.right.equalTo(bgValidateView.mas_left).with.offset(-5);
+        make.height.equalTo(coverPhoneView.mas_height);
+        
+    }];
+    
+    /** 错误提示 */
+    [errorLable mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.bottom.equalTo(coverPhoneView.mas_bottom);
+        make.left.equalTo(placePhoneView.mas_right);
+        make.right.equalTo(bgValidateView.mas_left).with.offset(-5);
+        make.height.mas_equalTo(@16);
+        
+    }];
+    
+    /** 验证 **/
+    [bgValidateView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(phoneField.mas_right).with.offset(paddingLeftRight);
+        make.right.equalTo(coverPhoneView.mas_right).with.offset(-paddingLeftRight);
+        make.centerY.equalTo(coverPhoneView.mas_centerY);
+        make.width.mas_equalTo(validateWidth);
+        make.height.mas_equalTo(@(kTextFieldH-paddingLeftRight-2));
+        
+    }];
+    
+    [lineValidateView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(coverPhoneView.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(coverPhoneView.mas_right).with.offset(-paddingLeftRight);
+        make.bottom.equalTo(coverPhoneView.mas_bottom);
+        make.height.mas_equalTo(lHeight);
+    }];
+    
+
+    [coverValidateView mas_makeConstraints:^(MASConstraintMaker *make) {
+        //问题
+        make.top.mas_equalTo(coverPhoneView.mas_bottom);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(kTextFieldH);
+        
+    }];
+    
+    [placeValidateView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.centerY.equalTo(coverValidateView.mas_centerY);
+        make.left.equalTo(coverValidateView.mas_left);
+        make.size.mas_equalTo(CGSizeMake(paddingLeftRight, kTextFieldH));
+        
+    }];
+    
+    /***输入验证码****/
+    [validateField mas_makeConstraints:^(MASConstraintMaker *make) {
+        //问题
+       make.top.mas_equalTo(coverPhoneView.mas_bottom);
+        
+        make.left.equalTo(placeValidateView.mas_right);
+        make.right.equalTo(coverValidateView.mas_right).with.offset(-5);
+        make.height.equalTo(coverValidateView.mas_height);
+        
+    }];
+    
+    
+    [lineValidateBottomView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.bottom.mas_equalTo(coverValidateView.mas_bottom);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(lHeight);
+    }];
+    
+    
+    //选择区域
+    [areaView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        @strongify(self);
+        make.left.equalTo(self.mas_left);
+        make.right.equalTo(self.mas_right);
+        make.height.mas_equalTo(@50);
+        make.top.equalTo(coverValidateView.mas_bottom);
+        
+    }];
+    
+    [areaTopLine mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.top.mas_equalTo(areaView.mas_top);
+        make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+        make.height.mas_equalTo(lHeight);
+    }];
+    
+    [areaLine mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.bottom.mas_equalTo(areaView.mas_bottom);
+        make.width.mas_equalTo(kScreenWidth);
+        make.height.mas_equalTo(lHeight);
+    }];
+
+    [areaField mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.top.mas_equalTo(areaView.mas_top);
+        make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+        make.height.equalTo(areaView.mas_height);
+        
+    }];
+    
+    [areaBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.top.mas_equalTo(areaView.mas_top);
+        make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+        make.height.equalTo(areaView.mas_height);
+        
+    }];
+    
+    /***阅读****/
+    [checkView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        @strongify(self);
+        make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+        make.height.mas_equalTo(@50);
+        make.top.equalTo(lineValidateBottomView.mas_bottom);
+        
+    }];
+
+    /***电子文档****/
+    [checkBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(checkView.mas_left);
+        make.centerY.equalTo(checkView.mas_centerY);
+        make.size.mas_equalTo(CGSizeMake(16, 16));
+        
+    }];
+    
+    [lableCheck mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(checkBtn.mas_right).with.offset(8);
+        make.right.equalTo(lableOptionl.mas_left);
+        make.centerY.equalTo(checkView.mas_centerY);
+        make.height.equalTo(checkView.mas_height);
+        
+    }];
+    
+    [lableOptionl mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(lableCheck.mas_right);
+        make.right.equalTo(lableOptionl.mas_right);
+        make.centerY.equalTo(checkView.mas_centerY);
+         make.height.equalTo(checkView.mas_height);
+        
+    }];
+    
+    
+    [checkCoverBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.equalTo(checkView.mas_left);
+        make.right.equalTo(lableOptionl.mas_right);
+        make.height.equalTo(checkView.mas_height);
+        make.centerY.equalTo(checkView.mas_centerY);
+        
+    }];
+    
+    /***登录****/
+    [loginBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        @strongify(self);
+        make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+        make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+        make.top.equalTo(checkView.mas_bottom).with.offset(0);
+        make.height.mas_equalTo(autoScaleH(48));
+    }];
+    
+}
+
+
+- (void)showAreaView:(Boolean)isVisiable {
+    
+    @weakify(self);
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        
+        @strongify(self);
+        if (isVisiable) {
+            
+            
+            [self layoutIfNeeded];
+            
+            [UIView animateWithDuration:0.5f animations:^{
+                
+                [self updateCheckViewConstrains:areaView and:50];
+                
+            } completion:^(BOOL finished) {
+                
+            
+                areaView.hidden = NO;
+            }];
+            
+        }else{
+            
+            if(areaView.hidden == NO){
+                
+                [self layoutIfNeeded];
+                
+                areaView.hidden = YES;
+                
+                [UIView animateWithDuration:0.3f animations:^{
+                    
+                    [self updateCheckViewConstrains:coverValidateView and:50];
+                    
+                } completion:^(BOOL finished) {
+                    
+                    NSString *tmp = phoneField.text;
+                    
+                    NSString *const phone = tmp;
+                    [self removeFromSubViews];
+                    [self setUp];
+                    phoneField.text = phone;
+                    
+                }];
+            
+            }
+        }
+    });
+    
+   
+}
+         
+- (void)updateCheckViewConstrains:(UIView *) view and:(int)height{
+     
+     int paddingLeftRight = kPaddingLeftRight;
+
+     /***阅读****/
+     @weakify(self);
+     [checkView mas_updateConstraints:^(MASConstraintMaker *make) {
+         
+         @strongify(self);
+         make.left.equalTo(self.mas_left).with.offset(paddingLeftRight);
+         make.right.equalTo(self.mas_right).with.offset(-paddingLeftRight);
+         make.height.mas_equalTo(height);
+         make.top.equalTo(view.mas_bottom);
+         //cover2View
+     }];
+     
+      [self layoutIfNeeded];
+ 
+ }
+
+- (void)onValidateClick{
+  
+    if ([self.loginDelegate respondsToSelector:@selector(onClickWithValidateEvent:)]) {
+        
+        NSString *phone = phoneField.text;
+        [phoneField endEditing:YES];
+       
+        if ([PhoneRegularUtil validatePhoneRegular:phone]) {
+            
+            errorLable.hidden = YES;
+            phone = [phone stringByReplacingOccurrencesOfString:@" " withString: @""];
+            
+            [self.loginDelegate onClickWithValidateEvent:phone];
+            
+            [timer onCountDownTimer:59];
+            
+            phone = nil;
+
+        }else{
+            
+            errorLable.hidden = NO;
+            errorLable.text = @"手机号码错误！";
+        }
+      
+    }
+}
+
+- (void)onCheckClick{
+    
+    
+    if (checkBtn.tag) {
+        
+        checkBtn.tag = 0;
+        checkBtn.image = [UIImage imageNamed:@"icon_Agree"];
+        
+        [self setViewEnable:loginBtn and:NO];
+        
+    }else{
+        
+        checkBtn.tag = 1;
+        checkBtn.image = [UIImage imageNamed:@"icon_AgreeSelect"];
+
+        if (phoneField.text.length >= 13 && validateField.text.length >= 6) {
+           
+            [self setViewEnable:loginBtn and:YES];
+        }
+       
+    }
+    
+
+}
+
+- (void)onLoginClick{
+    
+    loginBtn.backgroundColor = kBlueColor;
+    [loginBtn.layer setMasksToBounds:NO];
+    
+    if ([self.loginDelegate respondsToSelector:@selector(onClickWithLoginEvent:)]) {
+        
+        NSString *phone = phoneField.text;
+        
+        if ([PhoneRegularUtil validatePhoneRegular:phone]) {
+            
+            errorLable.hidden = YES;
+            
+            phone = [phone stringByReplacingOccurrencesOfString:@" " withString:@""];
+            self.item.mobile = phone;
+            self.item.vcode = validateField.text;
+            self.item.deviceCode = kDeviceUuidString;
+            
+            self.item.areaId = _areaId;
+            
+            [self.loginDelegate onClickWithLoginEvent:self.item];
+            
+            self.item = nil;
+
+        }else{
+            
+            errorLable.hidden = NO;
+            errorLable.text = @"手机号码错误！";
+        }
+
+    }
+}
+
+-(void)onAreaClick:(UIButton*)button{
+    
+    debugLog(@"dian");
+    [validateField endEditing:YES];
+    [phoneField endEditing:YES];
+    if ([self.loginDelegate respondsToSelector:@selector(onarealist:)]) {
+        [self.loginDelegate onarealist:button];
+    }
+    
+}
+
+- (void)onOptionClick{
+    
+    if ([self.loginDelegate respondsToSelector:@selector(onOptionWithProtocolEvent)]) {
+        [self.loginDelegate onOptionWithProtocolEvent];
+    }
+}
+
+- (void)onRefreshTimer:(NSString *)cutTimer{
+    
+    [self setViewEnable:bgValidateView and:NO];
+    NSString *time = [NSString stringWithFormat:@"正在获取%@秒",cutTimer];
+    [bgValidateView setTitle:time forState:UIControlStateNormal];
+    bgValidateView.titleLabel.font = [UIFont systemFontOfSize:13];
+
+}
+
+- (void)onTimerOut{
+    
+    [self setViewEnable:bgValidateView and:YES];
+    [bgValidateView setTitle:@"重新获取" forState:UIControlStateNormal];
+    bgValidateView.titleLabel.font = [UIFont systemFontOfSize:14];
+
+}
+
+- (void)resetValidateCode{
+    
+    validateField.text = nil;
+    [self setViewEnable:loginBtn and:NO];
+}
+
+- (void)notifyStopTimer{
+    
+    [timer stopTimer];
+}
+
+-(void)textFieldEditChanged:(NSNotification *)obj{
+    
+    int maxLength = 0;
+    
+    UITextField *textField = (UITextField *)obj.object;
+    if ([textField isKindOfClass: [RegularView class]]) {
+        
+        maxLength = 13;
+        
+    }else{
+        
+        maxLength = 6;
+    }
+    NSString *toBeString = textField.text;
+    NSString *lang = [[UITextInputMode currentInputMode] primaryLanguage];
+    if ([lang isEqualToString:@"zh-Hans"]) {
+        
+        UITextRange *selectedRange = [textField markedTextRange];
+        UITextPosition *position = [textField positionFromPosition:selectedRange.start offset:0];
+
+        if (!position) {
+            if (toBeString.length > maxLength) {
+                textField.text = [toBeString substringToIndex:6];
+            }
+        }
+       
+    }
+    if (toBeString.length >= maxLength) {
+        textField.text = [toBeString substringToIndex:maxLength];
+        
+        if (checkBtn.tag && phoneField.text.length == 13 && validateField.text.length == 6) {
+
+            [self setViewEnable:loginBtn and:YES];
+            
+        }
+        if (phoneField.text.length == 13) {
+            [self setViewEnable:bgValidateView and:YES];
+        }
+        
+    }else{
+
+        [self setViewEnable:loginBtn and:NO];
+        if (maxLength == 13) {
+            [self setViewEnable:bgValidateView and:NO];
+        }
+    }
+    
+}
+
+-(LoginParamItem *)item {
+    if (_item == nil) {
+        _item = [[LoginParamItem alloc]init];
+    }
+    return _item;
+}
+
+-(void)doneVule:(NSNotification *)sender{
+    debugLog(@"%@",sender.object);
+    
+
+    NSString *titleName = [sender.object objectForKey:@"areaName"];
+//    [self.areaBut setTitle:titleName forState:UIControlStateNormal];
+    self.areaId = [sender.object objectForKey:@"areaId"];
+    areaField.text = titleName;
+}
+
+- (void)setViewEnable:(UIControl *)view and:(BOOL)enable{
+    
+    if (enable) {
+        view.enabled = YES;
+        view.alpha = 1;
+        
+    }else{
+        view.enabled = NO;
+        view.alpha = 0.6;
+    }
+}
+@end

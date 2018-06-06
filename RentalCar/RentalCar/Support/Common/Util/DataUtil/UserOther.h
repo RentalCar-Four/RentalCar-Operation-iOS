@@ -1,0 +1,24 @@
+//
+//  appInfo.h
+//  eLearning
+//
+//  Created by Hulk on 16/8/15.
+//  Copyright © 2016年 com.shengjing360.kaixue. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface UserOther : NSObject
+
++ (UserOther *)UserOtherInstance;
+
+//身份证正面
+- (NSData *)ProId;
+
+//驾驶证正面
+- (NSData *)DriveID;
+
+//手持身份证正面
+- (NSData *)HoldProId;
+
+@end

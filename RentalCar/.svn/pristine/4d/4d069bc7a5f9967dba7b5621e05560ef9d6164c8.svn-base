@@ -1,0 +1,196 @@
+//
+//  MyTravelCell.m
+//  RentalCar
+//
+//  Created by Hulk on 2017/3/17.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "MyTravelCell.h"
+#import "LBorderView.h"
+
+@interface MyTravelCell ()
+@property(nonatomic,strong)UIView *cellcontentView;
+
+@end
+
+@implementation MyTravelCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
++ (instancetype)cellWithTableView:(UITableView *)tablView indexPath:(NSIndexPath *)indexPath {
+    
+    NSString *ID = [NSString stringWithFormat:@"statusCell%ld", indexPath.row];
+    //    ELHomeTableViewCell *cell = [tablView dequeueReusableCellWithIdentifier:ID];
+    MyTravelCell *cell = [tablView cellForRowAtIndexPath:indexPath];
+    if (cell == nil) {
+        cell = [[MyTravelCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ID];
+        
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    
+    return cell;
+}
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        //添加Feed具体内容
+        _cellcontentView = [[UIView alloc]initWithFrame:CGRectMake(10, 10, SCREEN_WIDTH-20, 0)];
+        _cellcontentView.backgroundColor = [UIColor colorWithHexString:@"#ffffff"];
+        //cell设置
+        self.opaque = YES;
+        
+        _cellcontentView.layer.cornerRadius = autoScaleW(5);
+        _cellcontentView.layer.shadowOffset =  CGSizeMake(0, 0); //阴影偏移量
+        _cellcontentView.layer.shadowOpacity = 0.2; //透明度
+        _cellcontentView.layer.shadowColor =  kShadowColor.CGColor; //阴影颜色
+        _cellcontentView.layer.shadowRadius = autoScaleW(2); //模糊度
+        
+        [self.contentView setBackgroundColor:[UIColor colorWithHexString:@"#FBFBFB"]];
+        [self.contentView addSubview:self.cellcontentView];
+    }
+    
+    return self;
+}
+
+- (void)setupDetailView{
+    CGRect contentRect = _cellcontentView.frame;
+    
+    contentRect.size.height = autoScaleH(162)-10;
+    _cellcontentView.frame = contentRect;
+    
+    //添加工具条
+    
+    [self BuildUI];
+}
+//@property(nonatomic,copy)NSString * rentNum; //租赁单号
+//@property(nonatomic,copy)NSString * numberPlate;//车牌号
+//@property(nonatomic,copy)NSString * startTime;//租赁开始 时间
+//@property(nonatomic,copy)NSString * endTime;//租赁结束 时间
+//@property(nonatomic,copy)NSString * startLocation;//租赁时的地址
+//@property(nonatomic,copy)NSString * endLocation;//还车时的地址
+//@property(nonatomic,copy)NSString * totalFee;//租赁总费用（元）
+//@property(nonatomic,copy)NSString * leaseMinutes;//租赁时长（分钟）
+//@property(nonatomic,copy)NSString * leaseMileage;//行驶里程（公里）
+-(void)BuildUI{
+    CGFloat mg = 10;
+    UIImageView *timeIcon = [[UIImageView alloc]init];
+//    [timeIcon setBackgroundColor:[UIColor redColor]];
+    [timeIcon setImage:[UIImage imageNamed:@"icon_ListTime"]];
+    [timeIcon setContentMode:UIViewContentModeScaleAspectFit];
+    [timeIcon setFrame:CGRectMake(autoScaleW(22), autoScaleH(21), autoScaleW(10), autoScaleH(10))];
+    CGFloat timeLabelX = CGRectGetMaxX(timeIcon.frame);
+    UILabel *timeLabel = [[UILabel alloc]init];
+//    [timeLabel setBackgroundColor:[UIColor blackColor]];
+    [timeLabel setText:[NSString stringWithFormat:@"01月23日 22:30"]];
+    [timeLabel setText:[NSString stringWithFormat:@"%@", self.model.startTime]];
+    [timeLabel setFont:[UIFont systemFontOfSize:12]];
+    [timeLabel setFrame:CGRectMake(timeLabelX+mg, autoScaleH(19), kScreenWidth, autoScaleH(12))];
+    [timeLabel setTextColor:[UIColor colorWithHexString:@"#909090"]];
+    [_cellcontentView addSubview:timeIcon];
+    [_cellcontentView addSubview:timeLabel];
+    
+    UIImageView *startPointIcon= [[UIImageView alloc]init];
+//    [startPointIcon setBackgroundColor:[UIColor redColor]];
+    [startPointIcon setImage:[UIImage imageNamed:@"icon_ListStart"]];
+    [startPointIcon setContentMode:UIViewContentModeScaleAspectFit];
+    [startPointIcon setFrame:CGRectMake(autoScaleW(22), autoScaleH(45), autoScaleW(10), autoScaleH(10))];
+    CGFloat startPointIconX = CGRectGetMaxX(timeIcon.frame);
+    UILabel *startPointLabel =[[UILabel alloc]init];
+    [startPointLabel setFont:[UIFont systemFontOfSize:12]];
+//    [startPointLabel setBackgroundColor:[UIColor blackColor]];
+    [startPointLabel setText:[NSString stringWithFormat:@"五道口优盛大厦地面停车场"]];
+     [startPointLabel setText:[NSString stringWithFormat:@"%@", self.model.startLocation]];
+    [startPointLabel setFrame:CGRectMake(startPointIconX+mg, autoScaleH(45), kScreenWidth, autoScaleH(12))];
+    [startPointLabel setTextColor:[UIColor colorWithHexString:@"#909090"]];
+    
+    [_cellcontentView addSubview:startPointIcon];
+    [_cellcontentView addSubview:startPointLabel];
+    
+    UIImageView *endPointIcon= [[UIImageView alloc]init];
+//    [endPointIcon setBackgroundColor:[UIColor redColor]];
+    [endPointIcon setImage:[UIImage imageNamed:@"icon_ListOver"]];
+    [endPointIcon setContentMode:UIViewContentModeScaleAspectFit];
+    [endPointIcon setFrame:CGRectMake(autoScaleW(22), autoScaleH(71), autoScaleW(10), autoScaleH(10))];
+    CGFloat endPointIconX = CGRectGetMaxX(timeIcon.frame);
+    UILabel *endPointLabel =[[UILabel alloc]init];
+    [endPointLabel setFont:[UIFont systemFontOfSize:12]];
+//    [endPointLabel setBackgroundColor:[UIColor blackColor]];
+    [endPointLabel setText:[NSString stringWithFormat:@"回龙观华联商场地下停车场"]];
+    [endPointLabel setText:[NSString stringWithFormat:@"%@", self.model.endLocation]];
+    [endPointLabel setFrame:CGRectMake(endPointIconX+mg, autoScaleH(69), kScreenWidth, autoScaleH(12))];
+    [endPointLabel setTextColor:[UIColor colorWithHexString:@"#909090"]];
+    
+    [_cellcontentView addSubview:endPointIcon];
+    [_cellcontentView addSubview:endPointLabel];
+    
+    
+    
+    CGFloat  viewLineY = CGRectGetMaxY(endPointLabel.frame);
+    LBorderView *viewLine = [[LBorderView alloc]init];
+    
+    [viewLine setFrame:CGRectMake(autoScaleW(0), viewLineY+16, _cellcontentView.width,0 )];
+    
+    [viewLine setBorderColor:[UIColor colorWithHexString:@"#EEF2F5"]];
+    viewLine.borderType = BorderTypeDashed;
+    viewLine.dashPattern = 6;
+    viewLine.spacePattern = 5;
+    viewLine.borderWidth = 1;
+    viewLine.cornerRadius = 0;
+    
+    [_cellcontentView addSubview:viewLine];
+    
+    CGFloat bottomLabelY =autoScaleH(105);
+    
+    UILabel *distanceLabel = [[UILabel alloc]init];
+    [distanceLabel setText:[NSString stringWithFormat:@"共计118分钟"]];
+    debugLog(@"%@",self.model.leaseMileage);
+    [distanceLabel setTextColor:[UIColor colorWithHexString:@"#949494"]];
+    [distanceLabel setFont:[UIFont systemFontOfSize:12]];
+    [distanceLabel setFrame:CGRectMake(startPointIconX+mg, bottomLabelY, _cellcontentView.width/4, 20)];
+//    [distanceLabel setBackgroundColor:[UIColor blackColor]];
+    
+    NSString *distanceLabelstr =[NSString stringWithFormat:@"共计%@分钟",self.model.leaseMinutes];
+    CGSize distanceLabeltextSize = [distanceLabelstr sizeWithFont:[UIFont systemFontOfSize:12] maxSize:CGSizeMake(MAXFLOAT, MAXFLOAT)];
+    
+    CGRect distanceLabelFrame =(CGRect){{startPointIconX+mg, bottomLabelY+7} , {distanceLabeltextSize.width,20} };
+    
+    distanceLabel.frame =distanceLabelFrame;
+    [distanceLabel setText:distanceLabelstr];
+    
+    UILabel *distanceTime = [[UILabel alloc]init];
+    [distanceTime setFrame:CGRectMake(distanceLabel.width+distanceLabel.origin.x+5, bottomLabelY+7, _cellcontentView.width/4, 20)];
+    [distanceTime setText:[NSString stringWithFormat:@"(多少公里)"]];
+    
+    [distanceTime setText:[NSString stringWithFormat:@"(%@公里)",self.model.leaseMileage]];
+   
+    [distanceTime setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [distanceTime setFont:[UIFont systemFontOfSize:12]];
+
+    [_cellcontentView addSubview:distanceLabel];
+    [_cellcontentView addSubview:distanceTime];
+
+    
+    UILabel *priceLab = [[UILabel alloc] initWithFrame:CGRectMake(_cellcontentView.width-150, bottomLabelY+7, 130, 20)];
+    priceLab.textColor = [UIColor colorWithHexString:@"#909090"];
+    priceLab.font = [UIFont systemFontOfSize:12];
+    priceLab.textAlignment = NSTextAlignmentRight;
+    [_cellcontentView addSubview:priceLab];
+    
+    NSMutableAttributedString *attributedStr = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"共消费 %@ 元",self.model.totalFee]];
+    [attributedStr addAttribute:NSFontAttributeName value:kAvantiBoldSize(5) range:NSMakeRange(4, self.model.totalFee.length)];
+    [attributedStr addAttribute:NSForegroundColorAttributeName value:UIColorFromRGB(0x5A5A5A) range:NSMakeRange(4, self.model.totalFee.length)];
+    priceLab.attributedText = attributedStr;
+}
+
+@end

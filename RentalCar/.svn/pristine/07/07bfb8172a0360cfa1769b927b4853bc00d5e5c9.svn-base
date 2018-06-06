@@ -1,0 +1,30 @@
+//
+//  NavBarView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/26.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseView.h"
+
+@protocol NavBarDelegate <NSObject>
+
+@optional
+- (void)onClickWithShowLeftMenuEvent; //显示侧滑菜单
+- (void)onClickWithSelectCityEvent; //选择城市
+
+@end
+
+@interface NavBarView : BaseView
+
+@property (nonatomic,weak) id<NavBarDelegate> delegate;
+@property (nonatomic,strong) UIImageView *leftBtn;//头像
+
+@property (nonatomic,retain) UIButton *cityBtn;
+
+@property (nonatomic,retain) UIImageView *loadingImgView;
+
+- (id)initWithFrame:(CGRect)frame withController:(BaseController *)baseVC;
+
+@end

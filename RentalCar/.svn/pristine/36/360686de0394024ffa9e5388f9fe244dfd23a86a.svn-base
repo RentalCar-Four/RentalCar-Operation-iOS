@@ -1,0 +1,67 @@
+//
+//  CarAnnotationView.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/9.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "CarAnnotationView.h"
+
+@interface CarAnnotationView ()
+{
+    UIImageView *_shadowImgView; //点阴影图片
+}
+
+@end
+
+@implementation CarAnnotationView
+
+- (id)initWithAnnotation:(id<MAAnnotation>)annotation reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithAnnotation:annotation reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        self.frame = CGRectMake(0, 0, autoScaleW(56), autoScaleW(56));
+        
+        _shadowImgView = [[UIImageView alloc] initWithFrame:CGRectMake(autoScaleW(18), autoScaleW(50), autoScaleW(12), autoScaleW(6))];
+        _shadowImgView.image = [UIImage imageNamed:@"img_LatPointShadow"];
+        [self addSubview:_shadowImgView];
+        
+        _imgView = [[UIImageView alloc] initWithFrame:CGRectMake(autoScaleW(2), autoScaleW(7), autoScaleW(44), autoScaleW(50))];
+        _imgView.image = [UIImage imageNamed:@"img_LatPointSelect"];
+        [self addSubview:_imgView];
+        
+        _countLab = [[UILabel alloc] initWithFrame:CGRectMake(autoScaleW(32), autoScaleW(1), autoScaleW(20), autoScaleW(20))];
+        _countLab.backgroundColor = kBlueColor;
+        _countLab.layer.cornerRadius = _countLab.width/2;
+        [_countLab.layer setMasksToBounds:YES];
+        _countLab.textAlignment = NSTextAlignmentCenter;
+        _countLab.font = [UIFont systemFontOfSize:12];
+        _countLab.textColor = [UIColor whiteColor];
+        [self addSubview:_countLab];
+        
+        _loadImgView = [[UIImageView alloc] initWithFrame:_countLab.frame];
+        _loadImgView.hidden = YES;
+        _loadImgView.backgroundColor = kBlueColor;
+        _loadImgView.layer.cornerRadius = _loadImgView.width/2;
+        [_loadImgView.layer setMasksToBounds:YES];
+        [self addSubview:_loadImgView];
+    }
+    
+    return self;
+}
+
+- (void)setItem:(StationItem *)item {
+    
+    //    _countLab.text = [APPUtil isBlankString:item.vehicleCnt]?@"0":item.vehicleCnt;
+    if ([APPUtil isBlankString:item.vehicleCnt] || [item.vehicleCnt isEqualToString:@"0"]) {
+        _countLab.hidden = YES;
+        _imgView.image = [UIImage imageNamed:@"img_LatPoint_none"];
+    } else {
+        _countLab.hidden = NO;
+        _countLab.text = item.vehicleCnt;
+        _imgView.image = [UIImage imageNamed:@"img_LatPoint"];
+    }
+}
+
+@end

@@ -1,0 +1,22 @@
+//
+//  StationItem.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/9.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseItem.h"
+
+@interface StationItem : BaseItem
+
+@property(nonatomic,copy)NSString * stationId; //站点 ID
+@property(nonatomic,copy)NSString * stationName; //站点名称
+@property(nonatomic,copy)NSString * vehicleCnt; //可租车辆数
+@property(nonatomic,copy)NSString * gpsLng; //GPS 经度
+@property(nonatomic,copy)NSString * gpsLat; //GPS 纬度
+@property(nonatomic,copy)NSString * addr; //地址
+@property(nonatomic,copy)NSString * distance; //站点与参数所传经纬度的距离
+@property(nonatomic,copy)NSString * returnStatus; //可还车状态， 1 可还， 2 已满
+
+@end

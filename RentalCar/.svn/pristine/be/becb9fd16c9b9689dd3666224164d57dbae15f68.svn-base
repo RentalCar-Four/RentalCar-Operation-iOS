@@ -1,0 +1,483 @@
+//
+//  ProIdentityIDViewController.m
+//  RentalCar
+//
+//  Created by Hulk on 2017/4/5.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "ProIdentityIDViewController.h"
+//#import "scnDriveViewController.h"暂时注销自定义相机
+#import "ProIdentityIDService.h"
+#import "XDYHomeService.h"
+//scnDrivePhotoDelegate,
+@interface ProIdentityIDViewController ()<ObserverServiceDelegate,UIImagePickerControllerDelegate,UINavigationControllerDelegate>
+{
+
+ProIdentityIDService *service;
+    XDYHomeService *HomeService;
+    UIButton *SubmitButton;
+    UIImagePickerController *imagePicker;
+}
+
+@property(nonatomic,strong)UIView* viewline;
+@property(nonatomic,strong)UIView *viewInfo;
+@property(nonatomic,strong)UIView *viewWithPic;
+@property(nonatomic,strong)UIImageView *picView;
+@property(nonatomic,strong)UIImageView *picView1;
+@property(nonatomic,strong)UIImageView *picView2;
+@property(nonatomic,assign)NSInteger upPicType;
+@property(nonatomic,strong)NSMutableArray *ImgMutableArray;
+@property(nonatomic,strong)UIButton *ClearBtn;
+@property(nonatomic,strong)UIButton *ClearBtn1;
+@property(nonatomic,strong)UIButton *ClearBtn2;
+@property(nonatomic,strong)UIImageView *PhotoImgView;
+@property(nonatomic,strong)UIImageView *PhotoImgView1;
+@property(nonatomic,strong)UIImageView *PhotoImgView2;
+
+@end
+
+@implementation ProIdentityIDViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    if (imagePicker == nil) {
+    imagePicker = [[UIImagePickerController alloc] init];
+        imagePicker.delegate = self;
+    }
+    
+    
+    if (_ImgMutableArray == nil) {
+        
+        _ImgMutableArray =[[NSMutableArray alloc]initWithObjects:@"",@"",@"", nil];
+    }
+    self.title =@"人工认证";
+    //认证状态
+    service = [[ProIdentityIDService alloc] init];
+    service.serviceDelegate = self;
+    HomeService = [[XDYHomeService alloc]init];
+    service.serviceDelegate = self;
+
+    if (self.ProType == 2 ||self.ProType == 3) {
+        _viewInfo = [[UIView alloc]initWithFrame:CGRectMake(kScreenWidth/2 -autoScaleW(345)/2,NVBarAndStatusBarHeight+autoScaleH(15), autoScaleW(345), autoScaleH(237))];
+        
+        [_viewInfo.layer setBorderColor:[UIColor colorWithHexString:@"#D2D2D2" alpha:0.2].CGColor];
+        [_viewInfo.layer setBorderWidth:1];
+        [_viewInfo.layer setCornerRadius:autoScaleH(10)];
+        
+        [self.view addSubview:_viewInfo];
+        
+        _viewline = [[UIView alloc]initWithFrame:CGRectMake(0, autoScaleH(46), _viewInfo.width, 1)];
+        [_viewline setBackgroundColor:[UIColor colorWithHexString:@"#EEF2F5"]];
+        [_viewInfo addSubview:_viewline];
+        
+        UILabel *labelName = [[UILabel alloc]initWithFrame:CGRectMake(_viewInfo.width/2-autoScaleW(115)/2, autoScaleW(16), autoScaleW(65), autoScaleH(13))];
+        [labelName setText:@"当前状态"];
+        [labelName setTextAlignment:NSTextAlignmentRight];
+        [labelName setFont:[UIFont systemFontOfSize:autoScaleH(13)]];
+        [_viewInfo addSubview:labelName];
+        
+        UILabel *ProTypeing = [[UILabel alloc]initWithFrame:CGRectMake(labelName.right+autoScaleH(10), autoScaleH(16), autoScaleW(60), autoScaleH(13))];
+        [ProTypeing setTextColor:[UIColor colorWithHexString:@"#25D880"]];
+        if (self.ProType == 2) {
+            [ProTypeing setText:@"认证中"];
+        }
+        
+        if (self.ProType == 3) {
+            [ProTypeing setText:@"认证失败"];
+            [ProTypeing setTextColor:[UIColor colorWithHexString:@"#FF6459"]];
+            labelName.centerX-=15;
+            ProTypeing.centerX-=15;
+        }
+        
+        [ProTypeing setTextAlignment:NSTextAlignmentLeft];
+        [ProTypeing setFont:[UIFont systemFontOfSize:autoScaleH(13)]];
+        [_viewInfo addSubview:ProTypeing];
+    }else{
+        
+        _viewInfo = [[UIView alloc]initWithFrame:CGRectMake(kScreenWidth/2 -autoScaleW(345)/2,NVBarAndStatusBarHeight+autoScaleH(15), autoScaleW(345), autoScaleH(187))];
+        [_viewInfo.layer setBorderColor:[UIColor colorWithHexString:@"#D2D2D2"].CGColor];
+        [_viewInfo.layer setBorderWidth:1];
+        [_viewInfo.layer setCornerRadius:autoScaleH(10)];
+        
+        [self.view addSubview:_viewInfo];
+    }
+    
+    
+    UILabel *proLabeleTitle = [[UILabel alloc]initWithFrame:CGRectMake(_viewInfo.width/2 -autoScaleW(200)/2,autoScaleH(15), autoScaleW(200), autoScaleH(15))];
+    
+    if (self.ProType == 2 || self.ProType == 3) {
+        [proLabeleTitle setFrame:CGRectMake(_viewInfo.width/2-autoScaleW(200)/2, _viewline.bottom+autoScaleH(15), autoScaleW(200), autoScaleH(15))];
+    }
+    
+    
+    proLabeleTitle.text = @"请按照要求上传以下三张照片";
+    [proLabeleTitle setFont:[UIFont systemFontOfSize:autoScaleH(15)]];
+    [proLabeleTitle setTextColor:[UIColor colorWithHexString:@"#686868"]];
+    [proLabeleTitle setTextAlignment:NSTextAlignmentCenter];
+    
+    [_viewInfo addSubview:proLabeleTitle];
+    
+    UILabel *proLabeleTitle2 = [[UILabel alloc]initWithFrame:CGRectMake(_viewInfo.width/2 -autoScaleW(200)/2,proLabeleTitle.bottom+ autoScaleH(13), autoScaleW(200), autoScaleH(12))];
+    
+    proLabeleTitle2.text = @"须保证证件信息清晰可见";
+    [proLabeleTitle2 setFont:[UIFont systemFontOfSize:autoScaleH(12)]];
+    [proLabeleTitle2 setTextColor:[UIColor colorWithHexString:@"#979797"]];
+    [proLabeleTitle2 setTextAlignment:NSTextAlignmentCenter];
+    
+    [_viewInfo addSubview:proLabeleTitle2];
+    
+    _viewWithPic = [[UIView alloc]initWithFrame:CGRectMake(_viewInfo.width/2 -autoScaleW(300)/2, proLabeleTitle2.bottom+autoScaleH(22), autoScaleW(300), autoScaleH(90))];
+    
+    [_viewInfo addSubview:_viewWithPic];
+    if (_picView == nil) {
+        _picView = [[UIImageView alloc]init];
+        _PhotoImgView =[[UIImageView alloc]init];
+        [_PhotoImgView setContentMode:UIViewContentModeScaleAspectFit];
+        [_PhotoImgView.layer setMasksToBounds:YES];
+        
+    }
+    if (_picView1 == nil) {
+        _picView1 = [[UIImageView alloc]init];
+        _PhotoImgView1 =[[UIImageView alloc]init];
+        [_PhotoImgView1 setContentMode:UIViewContentModeScaleAspectFit];
+        
+    }
+    if (_picView2 == nil) {
+        _picView2 = [[UIImageView alloc]init];
+        _PhotoImgView2 =[[UIImageView alloc]init];
+        [_PhotoImgView2 setContentMode:UIViewContentModeScaleAspectFit];
+        
+        
+    }
+
+    [self setupUploadBtn:_picView PhotoImgView:_PhotoImgView tag:100 X:0 titleText:@"身份证正面"];
+    [self setupUploadBtn:_picView1 PhotoImgView:_PhotoImgView1 tag:200 X:_viewWithPic.width/2 -autoScaleW(90)/2 titleText:@"驾驶证正页"];
+    [self setupUploadBtn:_picView2 PhotoImgView:_PhotoImgView2 tag:300 X:_viewWithPic.width-autoScaleW(90) titleText:@"手持身份证"];
+
+    SubmitButton =[[UIButton alloc]initWithFrame:CGRectMake(kScreenWidth/2 -autoScaleW(345)/2, _viewInfo.bottom +autoScaleH(20), autoScaleW(345), autoScaleH(48))];
+    
+    [SubmitButton setTitle:@"提交认证" forState:UIControlStateNormal];
+    if (self.ProType ==3) {
+    [SubmitButton setTitle:@"重新提交认证" forState:UIControlStateNormal];
+    }
+    
+    [SubmitButton addTarget:self action:@selector(SubmitImg) forControlEvents:UIControlEventTouchUpInside];
+    if (self.ProType == 2) {
+        [[APPUtil share]setButtonClickStyle:SubmitButton Shadow:NO normalBorderColor:0 selectedBorderColor:0 BorderWidth:0 normalColor:[UIColor colorWithHexString:@"#D8D8D8"] selectedColor:[UIColor colorWithHexString:@"#D8D8D8"] cornerRadius:autoScaleW(5)];
+        [SubmitButton setUserInteractionEnabled:NO];
+    }else{
+        [[APPUtil share]setButtonClickStyle:SubmitButton Shadow:YES normalBorderColor:0 selectedBorderColor:0 BorderWidth:0 normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(5)];
+    }
+    [self.view addSubview:SubmitButton];
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+//上传的按钮
+-(void)setupUploadBtn:(UIImageView *)backViewPic PhotoImgView:(UIImageView *)PhotoImgView tag:(NSInteger)tag X:(CGFloat)X titleText:(NSString *)titleText{
+    
+    CGFloat ClearBtnMG =autoScaleH(10);
+    
+    [backViewPic setFrame:CGRectMake(X, autoScaleH(-10), autoScaleW(90), autoScaleH(90))];
+    [backViewPic setUserInteractionEnabled:YES];
+    [backViewPic addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(shotPhoto:)]];
+    
+    backViewPic.tag =tag;
+    [backViewPic setContentMode:UIViewContentModeScaleAspectFit];
+    [backViewPic setImage:[UIImage imageNamed:@"img_UploadPhoto"]];
+
+    [_viewWithPic addSubview:backViewPic];
+
+    [PhotoImgView setFrame:CGRectMake(autoScaleW(3), autoScaleW(3), autoScaleW(84), autoScaleH(84))];
+    
+//    [PhotoImgView setBackgroundColor: [UIColor yellowColor]];
+    
+    [backViewPic addSubview:PhotoImgView];
+    
+    if (self.ClearBtn == nil &&tag == 100) {
+        self.ClearBtn =[[UIButton alloc]init];
+        self.ClearBtn.tag=1000;
+        [self setupClearBtn:PhotoImgView ClearBtn:self.ClearBtn X:backViewPic.right+ClearBtnMG Y:_viewWithPic.origin.y-ClearBtnMG];
+    }
+    if (self.ClearBtn1 == nil &&tag == 200) {
+        self.ClearBtn1 =[[UIButton alloc]init];
+        self.ClearBtn1.tag=2000;
+        [self setupClearBtn:PhotoImgView ClearBtn:self.ClearBtn1 X:backViewPic.right+ClearBtnMG Y:_viewWithPic.origin.y-ClearBtnMG];
+    }
+    if (self.ClearBtn2 == nil &&tag == 300) {
+        self.ClearBtn2 =[[UIButton alloc]init];
+        self.ClearBtn2.tag=3000;
+        [self setupClearBtn:PhotoImgView ClearBtn:self.ClearBtn2 X:backViewPic.right+ClearBtnMG Y:_viewWithPic.origin.y-ClearBtnMG];
+    }
+    
+    if (_ProType ==2) {
+        [backViewPic setUserInteractionEnabled:NO];
+        if ([titleText isEqualToString:@"驾驶证正页"]) {
+            NSDictionary *param = @{ @"picType":@"driveImg"};
+            //获取待认证上传图片
+            NSString *picUlr = [service requestGetMemberImgWithService:param];
+            [PhotoImgView sd_setImageWithURL:[NSURL URLWithString:picUlr] placeholderImage:[UIImage imageNamed:@"img_UploadPhoto"]];
+        }
+        
+        if ([titleText isEqualToString:@"身份证正面"]) {
+            NSDictionary *param = @{ @"picType":@"idImg"};
+            NSString *picUlr = [service requestGetMemberImgWithService:param];
+            [PhotoImgView sd_setImageWithURL:[NSURL URLWithString:picUlr] placeholderImage:[UIImage imageNamed:@"img_UploadPhoto"]];
+        }
+        
+        if ([titleText isEqualToString:@"手持身份证"]) {
+            NSDictionary *param = @{ @"picType":@"handIdImg"};
+            NSString *picUlr = [service requestGetMemberImgWithService:param];
+            [PhotoImgView sd_setImageWithURL:[NSURL URLWithString:picUlr] placeholderImage:[UIImage imageNamed:@"img_UploadPhoto"]];
+        }
+    }else if (_ProType ==3){
+        
+    }else{
+        
+        if ([titleText isEqualToString:@"驾驶证正页"]) {
+            if ([[UserOther UserOtherInstance] DriveID] !=nil) {
+                UIImage *DriveIDIMG = [UIImage imageWithData:[[UserOther UserOtherInstance] DriveID]];
+                [PhotoImgView setImage:DriveIDIMG];
+                [_ClearBtn1 setHidden:NO];
+            }
+        }
+        
+        if ([titleText isEqualToString:@"身份证正面"]) {
+            if ([[UserOther UserOtherInstance] ProId] !=nil) {
+                UIImage *ProIdIMG = [UIImage imageWithData:[[UserOther UserOtherInstance] ProId]];
+                [PhotoImgView setImage:ProIdIMG];
+                [_ClearBtn setHidden:NO];
+            }
+        }
+        
+        if ([titleText isEqualToString:@"手持身份证"]) {
+            
+            if ([[UserOther UserOtherInstance] HoldProId] !=nil) {
+                UIImage *HoldProIdIMG = [UIImage imageWithData:[[UserOther UserOtherInstance] HoldProId]];
+                [PhotoImgView setImage:HoldProIdIMG];
+                [_ClearBtn2 setHidden:NO];
+            
+            }
+        }
+    }
+    
+    UIImageView *viewPicWithTitle = [[UIImageView alloc]initWithFrame:CGRectMake(0, backViewPic.height-autoScaleH(20), backViewPic.width, autoScaleH(20))];
+    [viewPicWithTitle setImage:[UIImage imageNamed:@"img_UPtextBg"]];
+    [backViewPic addSubview:viewPicWithTitle];
+    
+    UILabel *viewPicWithTitlelable = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, viewPicWithTitle.width, viewPicWithTitle.height)];
+    [viewPicWithTitlelable setFont:[UIFont systemFontOfSize:autoScaleH(12)]];
+    [viewPicWithTitlelable setTextAlignment:NSTextAlignmentCenter];
+    [viewPicWithTitlelable setText:titleText];
+    [viewPicWithTitlelable setTextColor:[UIColor whiteColor]];
+    [viewPicWithTitle addSubview:viewPicWithTitlelable];
+    
+    
+}
+
+-(void)setupClearBtn:(UIImageView *)view ClearBtn:(UIButton*)ClearBtn X:(CGFloat)X Y:(CGFloat)Y {
+    
+    debugLog(@"%ld",ClearBtn.tag);
+    [ClearBtn setFrame:CGRectMake(X, Y, autoScaleW(20), autoScaleH(20))];
+    ClearBtn.mas_key = view;
+    [ClearBtn addTarget:self action:@selector(ClearImg:) forControlEvents:UIControlEventTouchUpInside];
+    [ClearBtn setBackgroundImage:[UIImage imageNamed:@"btn_DeletePhoto"] forState:UIControlStateNormal];
+    [ClearBtn setHidden:YES];
+    [_viewInfo addSubview:ClearBtn];
+}
+
+-(void)ClearImg:(UIButton *)button{
+    debugLog(@"%ld",button.tag);
+    if (button.tag == 1000) {
+        [_ImgMutableArray replaceObjectAtIndex:0 withObject:@""];
+        [[NSUserDefaults standardUserDefaults]removeObjectForKey:@"proId"];
+    }else if (button.tag ==2000){
+        [_ImgMutableArray replaceObjectAtIndex:1 withObject:@""];
+        [[NSUserDefaults standardUserDefaults]removeObjectForKey:@"driveID"];
+    }else{
+        [_ImgMutableArray replaceObjectAtIndex:2 withObject:@""];
+        [[NSUserDefaults standardUserDefaults]removeObjectForKey:@"holdProId"];
+    }
+    UIImageView *ClearImg = button.mas_key;
+    ClearImg.image = nil;
+    [button setHidden:YES];
+}
+
+-(void)shotPhoto:(UITapGestureRecognizer *)recognizer{
+    debugLog(@"%@",recognizer.view);
+    debugLog(@"拍照");
+    UIImageView *clickView = (UIImageView *)recognizer.view;
+    
+    if (_PhotoImgView.image !=nil && clickView.tag==100) {
+        return;
+    }
+    if (_PhotoImgView1.image !=nil && clickView.tag==200){
+        return;
+    }
+    
+    if (_PhotoImgView2.image !=nil && clickView.tag==300){
+        return;
+    }
+    
+    switch (clickView.tag) {
+        case 100:
+        {
+        self.upPicType = 1;
+//            scnDriveViewController *scn =[[scnDriveViewController alloc]init];
+//            scn.scnDriveDelegate =self;
+//            [self presentViewController:scn animated:YES completion:nil];
+            
+            imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+            
+             imagePicker.cameraDevice = UIImagePickerControllerCameraDeviceRear;
+            [self presentViewController:imagePicker animated:YES completion:nil];
+                
+        }
+            break;
+            
+        case 200:
+        {
+            self.upPicType = 2;
+//            scnDriveViewController *scn =[[scnDriveViewController alloc]init];
+//            scn.scnDriveDelegate =self;
+//            [self presentViewController:scn animated:YES completion:nil];
+            imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+            
+            
+             imagePicker.cameraDevice = UIImagePickerControllerCameraDeviceRear;
+            [self presentViewController:imagePicker animated:YES completion:nil];
+        }
+            break;
+            
+        case 300:
+        {
+            self.upPicType = 3;
+//            scnDriveViewController *scn =[[scnDriveViewController alloc]init];
+//            scn.scnDriveDelegate =self;
+//            scn.pushType =1;
+//            [self presentViewController:scn animated:YES completion:nil];
+            
+            imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+            
+            
+                imagePicker.cameraDevice = UIImagePickerControllerCameraDeviceFront;
+            
+            [self presentViewController:imagePicker animated:YES completion:nil];
+            
+        }
+            break;
+            
+        default:
+            break;
+    }
+    
+    
+    
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingImage:(UIImage *)image editingInfo:(nullable NSDictionary<NSString *,id> *)editingInfo NS_DEPRECATED_IOS(2_0, 3_0){
+    debugLog(@"%@",image);
+  UIImage * selectImg = [UIImage fitScreenWithImage:image];
+    switch (self.upPicType) {
+        case 1:
+        {
+            debugLog(@"%@",_PhotoImgView);
+            //            [_PhotoImgView setImage:selectImg];
+            
+            [_PhotoImgView setImage:selectImg];
+            //            [_ImgMutableArray insertObject:selectImg atIndex:0];
+            NSData *proIdData =UIImageJPEGRepresentation(selectImg, 1.0);
+            [[NSUserDefaults standardUserDefaults] setObject:proIdData forKey:@"proId"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [_ClearBtn setHidden:NO];
+            [_ImgMutableArray replaceObjectAtIndex:0 withObject:selectImg];
+            [self dismissViewControllerAnimated:YES completion:nil];
+            
+        }
+            break;
+        case 2:
+        {
+            
+            [_PhotoImgView1 setImage:selectImg];
+            //            [_ImgMutableArray insertObject:selectImg atIndex:1];
+            NSData *driveData =UIImageJPEGRepresentation(selectImg, 1.0);
+            [[NSUserDefaults standardUserDefaults] setObject:driveData forKey:@"driveID"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [_ClearBtn1 setHidden:NO];
+            debugLog(@"%@",_ImgMutableArray);
+            [_ImgMutableArray replaceObjectAtIndex:1 withObject:selectImg];
+            [self dismissViewControllerAnimated:YES completion:nil];
+        }
+            break;
+        case 3:
+        {
+            
+            [_PhotoImgView2 setImage:selectImg];
+            NSData *holdProIdData =UIImageJPEGRepresentation(selectImg, 1.0);
+            [[NSUserDefaults standardUserDefaults] setObject:holdProIdData forKey:@"holdProId"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            //            [_ImgMutableArray insertObject:selectImg atIndex:2];
+            [_ClearBtn2 setHidden:NO];
+            [_ImgMutableArray replaceObjectAtIndex:2 withObject:selectImg];
+            [self dismissViewControllerAnimated:YES completion:nil];
+            
+        }
+            break;
+            
+        default:
+            break;
+    }
+    
+}
+
+//-(void)onImg:(UIImage *)selectImg{
+//    
+//}
+-(void)SubmitImg{
+    SubmitButton.backgroundColor = kBlueColor;
+    [SubmitButton.layer setMasksToBounds:NO];
+    debugLog(@"%@",_ImgMutableArray);
+    if (![_ImgMutableArray[0] isKindOfClass:[UIImage class]]||![_ImgMutableArray[1] isKindOfClass:[UIImage class]]||![_ImgMutableArray[2] isKindOfClass:[UIImage class]]) {
+        [CustomAlertView alertWithMessage:@"请按照说明上传相应照片"];
+    }else{
+        NSString *token =[UserInfo share].token;
+        NSDictionary *param = @{ @"token":token, @"tempImgArr":_ImgMutableArray};
+        [service requestProIdentityCardInfoWithService:param success:^(id data) {
+            debugLog(@"%@",data);
+        } fail:^(NSString *error) {
+            
+        }];
+    }
+    
+    
+    
+}
+-(void)onSuccess:(id)data withType:(ActionType)type{
+    if (type == _REQUEST_ProID_) {
+    //刷新用户状态
+        [HomeService requestUserAuthState];
+        [CustomAlertView alertWithMessage:@"上传成功"];
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
+
+
+
+@end

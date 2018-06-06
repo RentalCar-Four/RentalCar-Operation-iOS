@@ -1,0 +1,30 @@
+//
+//  App.pch
+//  RentalCar
+//
+//  Created by hu on 17/3/5.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#ifndef PrefixCacher_pch
+#define PrefixCacher_pch
+
+#import "CacherUtil.h"
+#import "APPUtil.h"
+
+/*** 放置cacher key ***/
+
+#define  kAreaKey    @"areaId"
+#define  kAreaName    @"areaname"
+#define  kAuthKey    @"authId"
+
+#define  kNoNetworkKey    @"noNetwork"
+#define  kTestServerKey    @"testServer"
+
+/*** 系统文件位置 ***/
+
+#define DOCUMENT_FOLDER(fileName) [[NSHomeDirectory() stringByAppendingPathComponent:@"Documents"]stringByAppendingPathComponent:fileName]
+#define CACHE_FOLDER(fileName) [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) objectAtIndex:0] stringByAppendingPathComponent:fileName]
+
+
+#endif /* PrefixCacher_pch */

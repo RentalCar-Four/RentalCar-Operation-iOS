@@ -1,0 +1,1492 @@
+ //
+//  XDYHomeController.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/7.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "XDYHomeController.h"
+#import "XDYHomeService.h"
+#import "LocationTransform.h"
+#import "HomeMapView.h"
+#import "LeftMenuView.h"
+#import "NavBarView.h"
+#import "CarShowView.h"
+#import "CarPopView.h"
+#import "BookingTimerView.h"
+#import "ScanUnLockView.h"
+#import "walletViewController.h"
+#import "XDYLoginController.h"
+#import "XDYScanVC.h"
+#import "BaseNavController.h"
+#import "AboutViewController.h"
+#import "ReturnCarStationVC.h"
+#import "ClusterTestVC.h"
+#import "MyTravelViewController.h"
+#import "CarRunningView.h"
+#import "CarReturnConfirmView.h"
+#import "CarFeeDetailView.h"
+#import "PersonCenterViewController.h"
+#import "BackProtocol.h"
+#import "BaseWebController.h"
+#import "NSTimer+EocBlockSupports.h"
+
+typedef NS_ENUM(NSInteger,CarPopViewType){
+    _Type_BookingCarView_ = 1000,
+    _Type_CancelBookingView_,
+    _Type_UnLockCarView_,
+    _Type_CarPswView_,
+};
+
+@interface XDYHomeController ()<ObserverServiceDelegate,HomeMapDelegate,LeftMenuDelegate, NavBarDelegate,CarShowDelegate,BookingTimerDelegate,CarReturnConfirmDelegate, ScanUnLockDelegate,CarRunningDelegate,BackProtocol>
+{
+    XDYHomeService *_homeService;
+    LeftMenuView *_leftMenuView; //侧滑菜单
+    NavBarView *_navBarView; //导航条
+    HomeMapView *_homeMapView; //高德地图
+    NSMutableArray *_carScanUseArr; //扫码租车中车辆
+    NSMutableArray *_carBookingArr; //预约中车辆
+    NSString *_carTimerFlag; //1、预约计时 2、扫码计时
+    NSMutableArray *_carLeaseArr; //行程中车辆
+    ScanCarInfoItem *_currentScanCarInfoItem; //当前扫码用车信息
+    int authStateCount;
+   
+    LocationTransform *currentTransform;
+    // 倒计时
+    NSTimer *showTimer;
+    UIBackgroundTaskIdentifier taskID;
+    
+    int useCarFlag; //1、预约用车 2、扫码用车
+}
+
+//懒加载
+@property (nonatomic,strong) CarShowView *carShowView; //车辆展示
+@property (nonatomic,strong) BookingTimerView *bookingTimerView; //预约倒计时
+@property (nonatomic,strong) ScanUnLockView *scanUnLockView; //扫码开锁用车
+@property (nonatomic,strong) CarRunningView *carRunningView; //行程中
+@property (nonatomic,strong) CarReturnConfirmView *carReturnConfirmView; //还车确认
+
+@end
+
+@implementation XDYHomeController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _homeService = [[XDYHomeService alloc] init];
+    _homeService.serviceDelegate = self;
+    
+    //导航条
+    _navBarView = [[NavBarView alloc] initWithFrame:CGRectZero withController:self];
+    _navBarView.delegate = self;
+    
+    //高德地图
+    _homeMapView = [[HomeMapView alloc] init];
+    _homeMapView.delegate = self;
+    [self.view addSubview:_homeMapView];
+    
+    if ([APPUtil isLoginWithJump:NO]) {
+        [_homeService requestUserAuthState]; //验证会员状态
+        [_homeService requestCarInBookingWithService]; //获取已预约车辆
+        [_homeService requestCarInSearchInfoWithService]; //获取扫码租车车辆
+        [_homeService requestCarInLeaseWithService]; //获取行程中车辆
+    }
+    //[_homeService requestgetServicePhoneWithService];//获取客服电话
+    [_homeService requestgetAppVersionWithService];//获取版本信息
+    
+    _navBarView.loadingImgView.hidden = NO;
+    [APPUtil runAnimationWithCount:34 name:@"motion_DataLoading00" imageView:_navBarView.loadingImgView repeatCount:0 animationDuration:0.03]; //开始加载
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loginSucc) name:kLoginSuccNotification object:nil]; //登录成功
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(logoutSucc) name:kLogoutSuccNotification object:nil]; //注销成功
+    
+    //侧滑菜单
+    _leftMenuView = [[LeftMenuView alloc] init];
+    _leftMenuView.delegate = self;
+}
+
+//登录成功
+- (void)loginSucc {
+    [StatisticsClass eventId:DL02];
+    [_homeMapView.locationManager startUpdatingLocation]; //重新定位
+    [_homeService requestCarInBookingWithService]; //获取已预约车辆
+    [_homeService requestCarInSearchInfoWithService]; //获取扫码租车车辆
+    [_homeService requestCarInLeaseWithService]; //获取行程中车辆
+    [_homeService requestUserAuthState]; //验证会员状态
+}
+
+//注销成功
+- (void)logoutSucc {
+    [StatisticsClass eventId:TC01];
+    [self hideCarRunningAnimation]; //隐藏行程中页面
+    [self hideCarTimerAnimation]; //隐藏预约计时页面
+    [self hideCarAnimation];
+    [self hideScanCarAnimation];
+    [self hideCarTimerAnimation];
+    [self hideCarReturnConfirmAnimation];
+}
+
+//无网络
+- (void)netWorkDisappear {
+    [self showTipAnimation:@"无法连接服务器，请检查您的网络。"];
+}
+
+//有网络
+- (void)netWorkAppear {
+    [self hideTipAnimation];
+}
+
+#pragma mark - get data
+
+//获取站点
+- (void)getStationData:(LocationTransform *)location andRadius:(NSString *)radius {
+    
+    
+    
+    
+    if (_homeMapView.forbidAnnoClick==YES) {
+        return;
+    }
+    
+    [APPUtil runAnimationWithCount:19 name:@"motion_refresh00" imageView:_homeMapView.locationBtn repeatCount:0 animationDuration:0.03]; //开始加载
+    
+    //获取站点及可租车辆数量请求
+    NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:@"2",@"paging",
+                              [APPUtil isBlankString:[CacherUtil getCacherWithKey:kAreaKey]]?@"":[CacherUtil getCacherWithKey:kAreaKey],@"areaId",
+                              [NSString stringWithFormat:@"%f",location.longitude],@"gpsLng",
+                              [NSString stringWithFormat:@"%f",location.latitude],@"gpsLat",
+                              [radius integerValue]>1000?@"1":@"0",@"type",
+                              radius,@"distance",nil];
+    [_homeService requestStationForLeaseWithService:paramDic];
+}
+
+- (void)getData {
+    
+    LocationTransform *beforeLocation = [[LocationTransform alloc] initWithLatitude:_homeMapView.userLocation.coordinate.latitude andLongitude:_homeMapView.userLocation.coordinate.longitude];
+    //高德转化为GPS
+    LocationTransform *afterLocation = [beforeLocation transformFromGDToGPS];
+    
+    currentTransform = afterLocation;
+    [self getStationData:afterLocation andRadius:_homeMapView.stationRadius];
+}
+
+#pragma mark - init view
+
+- (CarShowView *)carShowView {
+    if (!_carShowView) {
+        _carShowView = [[CarShowView alloc] init];
+        _carShowView.delegate = self;
+    }
+    return _carShowView;
+}
+
+- (BookingTimerView *)bookingTimerView {
+    if (!_bookingTimerView) {
+        _bookingTimerView = [[BookingTimerView alloc] init];
+        _bookingTimerView.delegate = self;
+        _bookingTimerView.alpha = 0;
+    }
+    return _bookingTimerView;
+}
+
+- (ScanUnLockView *)scanUnLockView {
+    if (!_scanUnLockView) {
+        _scanUnLockView = [[ScanUnLockView alloc] init];
+        _scanUnLockView.delegate = self;
+    }
+    return _scanUnLockView;
+}
+
+- (CarRunningView *)carRunningView {
+    if (!_carRunningView) {
+        _carRunningView = [[CarRunningView alloc] init];
+        _carRunningView.delegate = self;
+        _carRunningView.alpha = 0;
+    }
+    return _carRunningView;
+}
+
+- (CarReturnConfirmView *)carReturnConfirmView {
+    if (!_carReturnConfirmView) {
+        _carReturnConfirmView = [[CarReturnConfirmView alloc] init];
+        _carReturnConfirmView.delegate = self;
+    }
+    return _carReturnConfirmView;
+}
+
+#pragma mark - methods
+
+- (void)resetAuthStateCount {
+    authStateCount = 0;
+}
+
+- (BOOL)isAuthStateCountOverThree {
+    if (++authStateCount<3) {
+        return YES;
+    } else {
+        return NO;
+    }
+}
+
+#pragma mark - ObserverServiceDelegate 接口数据处理代理
+
+- (void)onSuccess:(id)data withType:(ActionType)type{
+    
+    switch (type) {
+            
+#pragma mark - 获取版本信息
+            
+        case _REQUEST_getAppVersion_:
+        {
+            NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
+            debugLog(@"%@",data);
+            NSString *appCurVersion = [infoDictionary objectForKey:@"CFBundleShortVersionString"];
+            debugLog(@"当前应用软件版本:%@",appCurVersion);
+        NSString *explainText =  [data objectForKey:@"explain"];//更新内容
+            if ([explainText isEqualToString:@""]) {
+                explainText =  @"发现新版本，是否马上升级？";
+            }
+           // [data objectForKey:@"forceUpgrade"];//强制升级
+           // [data objectForKey:@"recomendUpgrade"];//非强制升级
+           // [data objectForKey:@"downloadUrl"];返回的url
+            
+            if ([[data objectForKey:@"forceUpgrade"] intValue] == 1) {
+                //强制升级，要升级
+                XDYAlertView *alert = [[XDYAlertView alloc] initWithContentText:explainText leftButtonTitle:@"" rightButtonTitle:@"App Store" TopButtonTitle:@"发现新版本！"];
+                //跳转
+                alert.doneBlock = ^()
+                {
+                    //跳转苹果链接
+                    [self pushAppStore];
+
+                };
+            }else if ([[data objectForKey:@"forceUpgrade"] intValue] == 2){//非强制升级要升级
+                XDYAlertView *alert = [[XDYAlertView alloc] initWithContentText:explainText leftButtonTitle:@"以后再说" rightButtonTitle:@"App Store" TopButtonTitle:@"发现新版本！"];
+                //跳转
+                alert.doneBlock = ^()
+                {
+                    //跳转苹果链接
+                    [self pushAppStore];
+                };
+            }else{
+                //不升级
+                debugLog(@"最新版本");
+            }
+            
+            
+            
+            
+//            if ([num1 compare:num2 options:NSNumericSearch] == NSOrderedDescending)
+//            {
+//                debugLog(@"%@ is bigger",num1);
+//            }else{
+//                //需要更新
+//                XDYAlertView *alert = [[XDYAlertView alloc] initWithContentText:@"发现新版本，是否马上升级？" leftButtonTitle:@"以后再说" rightButtonTitle:@"App Store" TopButtonTitle:@"发现新版本！"];
+//                //跳转
+//                alert.doneBlock = ^()
+//                {
+//                    //跳转苹果链接
+//                    if (IS_IOS_10) {
+//                        [[UIApplication sharedApplication]openURL:[NSURL URLWithString:@"itms-apps://itunes.apple.com/cn/app/xiao-ling-gou/id1129173295?mt=8"] options:@{} completionHandler:^(BOOL success) {
+//                            debugLog(@"跳转成功");
+//                        }];
+//                    }else{
+//                      [[UIApplication sharedApplication]openURL:[NSURL URLWithString:@"itms-apps://itunes.apple.com/cn/app/xiao-ling-gou/id1129173295?mt=8"]];
+//                    }
+//                };
+//            }
+        }
+            
+#pragma mark - 获取客服电话
+            
+        case _REQUEST_GeterSvicePhone_:
+        {
+            //            NSDictionary *resultDic = [data objectForKey:@"result"];
+            //
+            //            debugLog(@"%@",resultDic);
+            //            if (ServicePhoneNum ==NULL) {
+            //                    ServicePhoneNum = [resultDic objectForKey:@"phone"];
+            //
+            //            }
+            //
+            //            debugLog(@"%@",ServicePhoneNum);
+            //暂时写死
+//            ServicePhoneNum = @"";
+        }
+            break;
+            
+#pragma mark - 根据城市获取对应的区域
+            
+        case _REQUEST_CityToArea_:
+        {
+            NSDictionary *dic = (NSDictionary *)data;
+            
+            //获取城市名称 区域ID 网点半径
+            [CacherUtil saveCacher:kAreaKey withValue:dic[@"areaId"]];
+            [CacherUtil saveCacher:kAreaName withValue:dic[@"areaname"]];
+            
+            [_navBarView.cityBtn setTitle:[CacherUtil getCacherWithKey:kAreaName] forState:UIControlStateNormal];
+            [_navBarView.loadingImgView performSelector:@selector(setAnimationImages:) withObject:nil afterDelay:0];
+            _navBarView.loadingImgView.hidden = YES;
+            
+            _homeMapView.stationRadius = @"400";
+            
+            NSString *statusStr = dic[@"areaStatus"];
+            
+            if ([statusStr isEqualToString:@"1"]) { //开通
+                
+            }
+            
+            if ([statusStr isEqualToString:@"2"]) { //未开通
+                [self showTipAnimation:@"当前城市用车服务暂未开通。敬请期待！"];
+            }
+            
+            if ([statusStr isEqualToString:@"3"]) { //已开通但与会员注册区域不一致
+                [self showTipAnimation:@"暂未提供注册地外跨区域用车服务。"];
+            }
+            
+            [self getData];
+        }
+            break;
+            
+#pragma mark - 根据区域获取网点
+            
+        case _REQUEST_STATIONFORLEASE_:
+        {
+            [_homeMapView.locationBtn performSelector:@selector(setAnimationImages:) withObject:nil afterDelay:0];
+            _homeMapView.locationBtn.image = [UIImage imageNamed:@"icon_Location"];
+            
+            NSArray *array = [data mutableCopy];
+            if (array.count>0) {
+                _homeMapView.stationArr = [data mutableCopy];
+            }
+        }
+            break;
+            
+#pragma mark - 扫码租车中
+            
+        case _REQUEST_CarInSearchInfo_:
+        {
+            _carScanUseArr = [data mutableCopy];
+            _carTimerFlag = @"2";
+            if (_carScanUseArr.count>0) {
+                [self showCarTimerAnimation];
+                
+                //                if (_bookingTimerView.alpha==1&&![APPUtil isBlankString:_homeMapView.stationItem.gpsLng]) {
+                //
+                //                } else {
+                
+                [_homeMapView.stationArr removeAllObjects];
+                [_homeMapView removeAllAnnos];
+                BookingItem *item = _carScanUseArr[0];
+                StationItem *stationItem = [[StationItem alloc] init];
+                stationItem.gpsLat = item.gpsLat;
+                stationItem.gpsLng = item.gpsLng;
+                stationItem.addr = item.addr;
+                _homeMapView.stationItem = stationItem;
+                
+                //                }
+            }
+            
+        }
+            break;
+            
+#pragma mark - 预约中
+            
+        case _REQUEST_CarInBooking_:
+        {
+            _carBookingArr = [data mutableCopy];
+            _carTimerFlag = @"1";
+            if (_carBookingArr.count>0) {
+                [self showCarTimerAnimation];
+                
+//                if (_bookingTimerView.alpha==1&&![APPUtil isBlankString:_homeMapView.stationItem.gpsLng]) {
+//                    
+//                } else {
+                
+                    [_homeMapView.stationArr removeAllObjects];
+                    [_homeMapView removeAllAnnos];
+                    BookingItem *item = _carBookingArr[0];
+                    StationItem *stationItem = [[StationItem alloc] init];
+                    stationItem.gpsLat = item.gpsLat;
+                    stationItem.gpsLng = item.gpsLng;
+                    stationItem.addr = item.addr;
+                    _homeMapView.stationItem = stationItem;
+                    
+//                }
+            }
+            
+        }
+            break;
+            
+#pragma mark - 行程中
+            
+        case _REQUEST_CarInLease_:
+        {
+            _carLeaseArr = [data mutableCopy];
+            if (_carLeaseArr.count>0) {
+                [self hideCarTimerAnimation];
+                [self hideScanCarAnimation];
+                [self showCarRunningAnimation];
+                CarPopView *popView = [self.view viewWithTag:_Type_CarPswView_];
+                [popView closeAction];
+            } else { //车机还车
+                
+                if (_carRunningView.alpha==1||_carReturnConfirmView.alpha==1) {
+                    [APPUtil showToast:@"还车成功"];
+                
+                    [_homeMapView.mapView setZoomLevel:17];
+                    [self getStationData:currentTransform andRadius:_homeMapView.stationRadius];
+                    [self hideCarRunningAnimation];
+                    [self hideCarReturnConfirmAnimation];
+                }
+                
+            }
+            
+        }
+            break;
+            
+#pragma mark - 取消预约
+            
+        case _REQUEST_CancelBookingCar_:
+        {
+            [TipUtil showSuccTip:@"取消预约成功"];
+            [self hideCarTimerAnimation];
+            [_homeMapView.mapView removeAnnotation:_homeMapView.anno];
+            _homeMapView.forbidAnnoClick = NO;
+            [self getStationData:currentTransform andRadius:_homeMapView.stationRadius];
+        }
+            break;
+            
+#pragma mark - 扫码租车获取车辆信息
+            
+        case _REQUEST_SearchCarForLease_:
+        {
+            _currentScanCarInfoItem = data;
+            NSString *rentStatus = _currentScanCarInfoItem.rentStatus;
+            if ([rentStatus isEqualToString:@"1"]) {
+                [self showScanCarAnimation];
+            }
+            
+            if ([rentStatus isEqualToString:@"2"]) {
+                [self showCarTimerAnimation];
+            }
+            
+            if ([rentStatus isEqualToString:@"3"]) {
+                [self showCarRunningAnimation];
+            }
+            
+            if ([rentStatus isEqualToString:@"4"]) {
+                
+                [APPUtil showToast:_currentScanCarInfoItem.nonRentReason];
+            }
+            
+        }
+            break;
+            
+#pragma mark - 还车
+            
+        case _REQUEST_ReturnCar_:
+        {
+            NSDictionary *resultDic = data;
+            
+            NSString *returnStatus = resultDic[@"returnStatus"];
+            
+            if ([returnStatus isEqualToString:@"1"]) { //还车成功
+                
+                [APPUtil showToast:@"还车成功"];
+                
+                [self hideCarReturnConfirmAnimation];
+                [self hideCarTimerAnimation];
+                [self hideScanCarAnimation];
+                
+                [_homeMapView.mapView setZoomLevel:17];
+                [self getStationData:currentTransform andRadius:_homeMapView.stationRadius];
+                
+                //还车成功
+//                CarFeeDetailView *carFeeDetailView = [[CarFeeDetailView alloc] init];
+//                carFeeDetailView.resultDic = resultDic;
+//                [self.view addSubview:carFeeDetailView];
+//                
+//                carFeeDetailView.doneBlock = ^(){
+                
+                    [self hideCarRunningAnimation];
+//                };
+            } else { //还车失败
+                
+                [APPUtil showToast:@"还车失败 请检查还车事项"];
+                
+                NSArray *checkList = resultDic[@"list"];
+                
+                for (int i = 0; i<checkList.count; i++) {
+                    NSDictionary *item = checkList[i];
+                    
+                    if ([item[@"id"] isEqualToString:@"1"]) {
+                        
+                        if (![item[@"passed"] isEqualToString:@"1"]) {
+                            _carReturnConfirmView.Lab1.textColor = UIColorFromRGB(0xFF6459);
+                        }
+                    }
+                    
+//                    if ([item[@"id"] isEqualToString:@"2"]) {
+//                        
+//                        if (![item[@"passed"] isEqualToString:@"1"]) {
+//                            _carReturnConfirmView.Lab3.textColor = UIColorFromRGB(0xFF6459);
+//                        }
+//                    }
+                }
+            }
+        }
+            break;
+            
+            
+        case _REQUEST_AUTHSTATE_OK://获取会员信息完成
+        {
+            if (![APPUtil isLoginWithJump:NO]) {
+                _navBarView.leftBtn.image = [UIImage imageNamed:@"img_avatar_logout"];
+            } else {
+                UIImage *cachedImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:@"headImg"];
+                if (cachedImage == nil) {
+                    [_navBarView.leftBtn sd_setImageWithURL:[NSURL URLWithString:[UserInfo share].headImgUrl] placeholderImage:[UIImage imageNamed:@"img_avatar"]];
+                }else{
+                    [_navBarView.leftBtn setImage:cachedImage];
+                }
+            }
+        }
+            break;
+            
+#pragma mark - 获取租车密码
+            
+        case _REQUEST_GetRentPwd_:
+        {
+            //车机密码弹框
+            CarPopView *carPswView = [[CarPopView alloc] initWithImageName:@"img_password" contentText:[NSString stringWithFormat:@"输入密码 %@",data] descText:@"请在车内中控屏上输入6位密码，以解锁车辆并开始计费。" range:NSMakeRange(0, 0) leftButtonTitle:@"" rightButtonTitle:@"我知道了"];
+            carPswView.tag = _Type_CarPswView_;
+            [self.view addSubview:carPswView];
+            
+            //[carPswView startTimer]; //10s倒计时
+            
+            __weak CarPopView *popSelf = carPswView;
+            carPswView.confirmBlock = ^(){ //我知道了
+                
+                [popSelf closeAction];
+                
+                if (useCarFlag==1) { //预约用车
+                    if (self.bookingTimerView.flag==1) {
+                        [self hideCarTimerAnimation];
+                        [_homeService requestCarInBookingWithService]; //获取已预约车辆
+                    }
+                    useCarFlag = 0;
+                }
+                
+                if (useCarFlag==2) { //扫码、输入车牌号用车
+                    [self hideScanCarAnimation];
+                    [_homeService requestCarInSearchInfoWithService]; //获取扫码租车车辆
+                    useCarFlag = 0;
+                }
+            };
+        }
+            
+        default:
+            break;
+    }
+}
+
+- (void)onFailureWithType:(ActionType)type{
+    
+    switch (type) {
+        case _REQUEST_STATIONFORLEASE_:
+        {
+        
+        }
+            
+            break;
+        case _REQUEST_AUTHSTATE_:
+        {
+            if ([self isAuthStateCountOverThree]) {
+                [_homeService requestUserAuthState];
+            }
+        }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+#pragma mark - BackProtocol 扫码回调代理
+
+- (void)backAction:(NSString *)str {
+    
+    NSLog(@"扫码结果：%@",str);
+    
+    NSDictionary *paramDic;
+    //车架号
+    if (str.length==17) {
+        paramDic = [NSDictionary dictionaryWithObjectsAndKeys:str,@"vin",nil];
+    } else {
+        paramDic = [NSDictionary dictionaryWithObjectsAndKeys:[APPUtil urlEncoding:str],@"numberPlate",nil];
+    }
+    [_homeService requestSearchCarForLeaseWithService:paramDic];
+}
+
+#pragma mark - LeftMenuDelegate 侧滑栏代理
+
+//隐藏侧滑菜单
+- (void)onClickWithHideLeftMenuEvent {
+    
+    _leftMenuView.leftViewShow = 0;
+    [self prefersStatusBarHidden];
+    
+    [UIView animateWithDuration:0.4 animations:^{
+        [self setNeedsStatusBarAppearanceUpdate];
+        _leftMenuView.leftView.left = -kScreenWidth;
+        _leftMenuView.shadowView.alpha = 0.0;
+    } completion:^(BOOL finished) {
+        _leftMenuView.leftView.hidden = YES;
+        _leftMenuView.shadowView.hidden = YES;
+    }];
+}
+
+//头像跳转方法
+- (void)onClickWithHeaderViewEvent {
+    [StatisticsClass eventId:@"CD01"];
+    [self performSelector:@selector(pushVer) withObject:nil afterDelay:0.4];
+}
+
+-(void)pushVer{
+    
+    //    XLDVerificationCViewController *vrf = [[XLDVerificationCViewController alloc]init];
+    //    [self.navigationController pushViewController:vrf animated:YES];
+    
+    // 验证用户是否登录
+    if (![APPUtil isLoginWithJump:YES]) {
+        return;
+    }
+    
+    PersonCenterViewController *Center = [[PersonCenterViewController alloc]init];
+    [self.navigationController pushViewController:Center animated:YES];
+}
+
+-(void)onDidSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    if (indexPath.row == 0) {
+        
+        // 验证用户是否登录
+        if (![APPUtil isLoginWithJump:YES]) {
+            return;
+        }
+        [StatisticsClass eventId:CD02];
+        walletViewController *wallet = [[walletViewController alloc]init];
+        [self.navigationController pushViewController:wallet animated:YES];
+    }
+    
+    if (indexPath.row == 1) {
+        
+        // 验证用户是否登录
+        if (![APPUtil isLoginWithJump:YES]) {
+            return;
+        }
+        [StatisticsClass eventId:CD04];
+        MyTravelViewController *mytravelVc = [[MyTravelViewController alloc]init];
+        [self.navigationController pushViewController:mytravelVc animated:YES];
+    }
+    
+    if (indexPath.row == 4) {
+        [StatisticsClass eventId:CD06];
+        AboutViewController *myAboutVc = [[AboutViewController alloc]init];
+        myAboutVc.aboutServicePhoneNum = ServicePhoneNum;
+        [self.navigationController pushViewController:myAboutVc animated:YES];
+        
+    }
+    
+    if (indexPath.row == 2) {
+        [StatisticsClass eventId:CD05];
+        
+        //        dispatch_async(dispatch_get_main_queue(), ^{
+        
+        [self PalyServicePhoneNum];
+        
+        //        });
+        
+    }
+    
+    [self onClickWithHideLeftMenuEvent];
+}
+
+#pragma mark - NavBarDelegate 导航条代理
+
+//显示侧滑菜单
+- (void)onClickWithShowLeftMenuEvent {
+    
+    [StatisticsClass eventId:SY01];
+    
+    _leftMenuView.leftView.right = 0;
+    _leftMenuView.leftView.hidden = NO;
+    _leftMenuView.shadowView.hidden = NO;
+    _leftMenuView.isAnimationOn = YES;
+    _leftMenuView.leftViewShow = 1;
+    [self prefersStatusBarHidden];
+    
+    [UIView animateWithDuration:0.5 animations:^{
+        [self setNeedsStatusBarAppearanceUpdate];
+        _leftMenuView.leftView.left = 0;
+        _leftMenuView.shadowView.alpha = 1.0;
+    } completion:^(BOOL finished) {
+        _leftMenuView.isAnimationOn = NO;
+    }];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [_leftMenuView.leftTableView reloadData];
+        [_leftMenuView.headView setNeedsLayout];
+    });
+}
+
+//选择城市
+- (void)onClickWithSelectCityEvent {
+    
+    [StatisticsClass eventId:SY02];
+}
+
+#pragma mark - HomeMapDelegate 高德地图代理
+
+//定位成功回调
+- (void)locationSuccess:(LocationTransform *)afterLocation withRadius:(NSString *)radius {
+    
+    currentTransform = afterLocation;
+    [self getStationData:afterLocation andRadius:radius];
+}
+
+//定位反地理编码城市结果回调
+- (void)returnReGeocodeCityResult:(NSMutableDictionary *)dic {
+    
+    if ([APPUtil isBlankString:[CacherUtil getCacherWithKey:kAreaKey]]) {
+        
+        //根据城市获取区域ID
+        NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:dic[@"province"],@"province",
+                                  dic[@"city"],@"city",
+                                  dic[@"district"],@"county",
+                                  nil];
+        
+        [_homeService requestCityToAreaWithService:paramDic];
+    }
+}
+
+//扫码用车
+- (void)onClickWithScanUseCarEvent {
+    
+    [StatisticsClass eventId:SY03];
+    
+//    ReturnCarStationVC *vc = [[ReturnCarStationVC alloc] init];
+//    ClusterTestVC *vc = [[ClusterTestVC alloc] init];
+//    [self.navigationController pushViewController:vc animated:YES];
+//    return;
+    
+    
+    // 验证用户是否登录
+    if (![APPUtil isLoginWithJump:YES]) {
+        return;
+    }
+    
+    // 验证会员账号状态
+    if (![APPUtil isAccountStatePass:self]) { //没开通
+        return;
+    }
+    
+    if ([APPUtil isCameraPermissionOn]) {
+        // 扫描页
+        XDYScanVC *scanVC = [[XDYScanVC alloc] init];
+        scanVC.backDelegate = self;
+        BaseNavController *nc = [[BaseNavController alloc] initWithRootViewController:scanVC];
+        scanVC.modalTransitionStyle = 0;
+        [self presentViewController:nc animated:YES completion:nil];
+    }
+}
+
+//单击地图
+- (void)singleTappedMapView {
+    
+    [self.view endEditing:YES];
+    
+    if (self.carShowView.alpha==1) {
+        //隐藏选择车辆
+        [self hideCarAnimation];
+    }
+}
+
+//用户移动地图结束
+- (void)userMoveMapViewEnd:(LocationTransform *)afterLocation withRadius:(NSString *)radius {
+    
+    if (self.carShowView.alpha==1) {
+        
+    } else {
+        currentTransform = afterLocation;
+        [self getStationData:afterLocation andRadius:radius];
+    }
+}
+
+//选中标注
+- (void)selectAnnotationView:(StationItem *)stationItem andCarArr:(NSMutableArray *)carArr {
+    
+    [StatisticsClass eventId:SY04];
+    
+    //选择车辆
+    [self.view addSubview:self.carShowView];
+    self.carShowView.stationItem = stationItem;
+    self.carShowView.carItems = [carArr mutableCopy];
+    self.carShowView.userLoc = _homeMapView.userLocation.coordinate;
+}
+
+//不选中标注
+- (void)deselectAnnotationView {
+    
+    if (self.carShowView.alpha==1) {
+        //隐藏选择车辆
+        [self hideCarAnimation];
+    }
+    
+    //预约中、行程中不清除路线
+    if ((self.carRunningView && self.carRunningView.alpha==1) || (self.bookingTimerView && self.bookingTimerView.alpha==1)) {
+        
+    } else {
+        /* 清空地图上已有的路线. */
+        [_homeMapView.naviRoute removeFromMapView];
+        [_homeMapView removeSelectAnno];
+    }
+}
+
+//路线规划失败
+- (void)routeSearchFail {
+    
+    [self showCarAnimation]; //选择车动画
+}
+
+//路线规划成功
+- (void)routeSearchSuccess {
+    
+    if (self.bookingTimerView.alpha==1) {
+        
+        NSMutableArray *array = [[NSMutableArray alloc] initWithObjects:@"1", nil];
+        /* 缩放地图使其适应polylines的展示. */
+        [_homeMapView mapRouteLarge:array];
+    } else {
+        /* 缩放地图使其适应polylines的展示. */
+        [_homeMapView mapRouteLarge:self.carShowView.carItems];
+    
+        [self showCarAnimation]; //选择车动画
+    }
+}
+
+#pragma mark - GetCarDelegate 预约用车代理
+
+//计费规则
+- (void)onClickWithCarPriceRuleEvent:(CarItem *)item {
+    [BaseWebController showWithContro:self withUrlStr:item.priceDtlUrl withTitle:@"计费规则" isPresent:NO];
+}
+
+- (void)onClickWithUseCarEvent:(CarItem *)item {
+    NSLog(@"预约用车 车牌号：%@  %@",item.numberPlate,item.vin);
+    
+    // 验证用户是否登录
+    if (![APPUtil isLoginWithJump:YES]) {
+        return;
+    }
+    
+    // 验证会员账号状态
+    if (![APPUtil isAccountStatePass:self]) { //没开通
+        return;
+    }
+    
+    //预约车弹框
+    CarPopView *bookingCarView = [[CarPopView alloc] initWithImageName:@"img_book" contentText:@"预约用车" descText:@"成功预约后车辆会为您免费保留20分钟，超时未用车订单将自动取消。" range:NSMakeRange(10, 8) leftButtonTitle:@"取消" rightButtonTitle:@"立即预约"];
+    bookingCarView.tag = _Type_BookingCarView_;
+    [self.view addSubview:bookingCarView];
+    
+    bookingCarView.carItem = item;
+    
+    __weak CarPopView *weakPopView = bookingCarView;
+    
+    bookingCarView.cancelBlock = ^(){ //取消预约
+        [weakPopView closeAction];
+    };
+    bookingCarView.bookingFailBlock = ^(){ //预约失败
+        [self getStationData:currentTransform andRadius:_homeMapView.stationRadius];
+    };
+    [bookingCarView setBookingSuccBlock:^(BookingItem *item){ //预约成功
+        
+        _homeMapView.stationArr = [NSMutableArray array];
+        
+        //隐藏预约车弹框、显示预约计时弹框
+        [self hideCarAnimation];
+        
+        [_homeService requestCarInBookingWithService]; //获取已预约车辆
+    }];
+}
+
+#pragma mark - BookingTimerDelegate 预约计时代理
+
+//取消预约
+- (void)onClickWithCancelBookingCarEvent:(BookingItem *)item {
+    
+    //开锁弹框
+    CarPopView *cancelBookingView = [[CarPopView alloc] initWithImageName:@"img_worning" contentText:@"取消预约" descText:@"车辆将不再为您保留，当日取消3次将无法用车。" range:NSMakeRange(0, 0) leftButtonTitle:@"确认取消" rightButtonTitle:@"我再想想"];
+    cancelBookingView.tag = _Type_CancelBookingView_;
+    [self.view addSubview:cancelBookingView];
+    
+    cancelBookingView.bookingItem = item;
+    
+    __weak CarPopView *weakPopView = cancelBookingView;
+    
+    cancelBookingView.cancelBlock = ^(){ //确认取消
+        
+        NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:item.ID,@"bookingId",nil];
+        [_homeService requestCancelBookingCarWithService:paramDic];
+        
+        [weakPopView closeAction];
+    };
+    cancelBookingView.confirmBlock = ^(){ //我再想想
+        [weakPopView closeAction];
+    };
+}
+
+//开锁用车
+- (void)onClickWithUnLockCarEvent:(BookingItem *)item {
+    
+    useCarFlag = 1;
+    [self getRentPsw:item];
+}
+
+//查看租车密码
+- (void)onClickWithShowCarPswEvent:(BookingItem *)item {
+    
+    //获取租车密码
+    [_homeService requestGetRentPwdService];
+}
+
+//倒计时结束、预约取消
+- (void)onClickWithTimerOverEvent:(BookingItem *)item {
+    
+    XDYAlertView *alert = [[XDYAlertView alloc] initWithContentText:@"超时未用车，预约订单已被取消。" leftButtonTitle:@"取消" rightButtonTitle:@"我知道了" TopButtonTitle:@"提示"];
+    alert.doneBlock = ^()
+    {
+        
+    };
+    
+    //隐藏车辆计时弹框
+    [self hideCarTimerAnimation];
+    
+    [self getStationData:currentTransform andRadius:_homeMapView.stationRadius];
+}
+
+//获取租车密码
+- (void)getRentPsw:(BookingItem *)item {
+    //开锁弹框
+    CarPopView *unLockCarView = [[CarPopView alloc] initWithImageName:@"img_open" contentText:@"开锁用车" descText:@"即将打开车门，请在开锁前核对车辆牌号。" range:NSMakeRange(0, 0) leftButtonTitle:@"取消" rightButtonTitle:@"确认开锁"];
+    unLockCarView.tag = _Type_UnLockCarView_;
+    [self.view addSubview:unLockCarView];
+    
+    unLockCarView.bookingItem = item;
+    unLockCarView.fromFlag = useCarFlag;
+    
+    __weak CarPopView *weakPopView = unLockCarView;
+    
+    unLockCarView.cancelBlock = ^(){ //取消
+        [weakPopView closeAction];
+    };
+    unLockCarView.confirmBlock = ^(){ //开锁成功
+    
+        [self startMinuteTimer:5 andType:_REQUEST_CarInLease_]; //每隔5秒刷新一次行程中接口
+        
+        //获取租车密码
+        [_homeService requestGetRentPwdService];
+    };
+}
+
+#pragma mark - ScanUnLockDelegate 扫码开门代理
+
+//计费规则
+- (void)onClickWithPriceRuleEvent:(ScanCarInfoItem *)item {
+    [BaseWebController showWithContro:self withUrlStr:item.priceDtlUrl withTitle:@"计费规则" isPresent:NO];
+}
+
+//取消开锁
+- (void)onClickWithCancelUnLockCarEvent:(ScanCarInfoItem *)item {
+    [self hideScanCarAnimation];
+}
+
+//扫码开锁
+- (void)onClickWithScanUnLockCarEvent:(ScanCarInfoItem *)item {
+    
+    NSLog(@"%@",item.orderNo);
+    
+    BookingItem *bookingItem = [[BookingItem alloc] init];
+    bookingItem.ID = item.orderNo;
+    bookingItem.vin = item.vin;
+    
+    useCarFlag = 2;
+    [self getRentPsw:bookingItem];
+}
+
+#pragma mark - CarRunningDelegate 行程中代理
+
+//查看还车点
+- (void)onClickWithReturnCarEvent {
+    ReturnCarStationVC *returnCarStationVC = [[ReturnCarStationVC alloc] init];
+    [self.navigationController pushViewController:returnCarStationVC animated:YES];
+}
+
+//行程中开车门
+- (void)onClickWithOpenCarDoorEvent:(BookingItem *)item {
+    
+    NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:item.rentNum,@"rentNum",
+                              @"2",@"action",nil];
+    [_homeService requestOpenOrCloseLeaseCarWithService:paramDic];
+}
+
+//行程中关车门
+- (void)onClickWithCloseCarDoorEvent:(BookingItem *)item {
+    
+    NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:item.rentNum,@"rentNum",
+                              @"1",@"action",nil];
+    [_homeService requestOpenOrCloseLeaseCarWithService:paramDic];
+}
+
+//结束行程
+- (void)onClickWithFinishRunningEvent:(BookingItem *)item {
+    
+    [self hideCarRunningAnimation];
+    [self showCarReturnConfirmAnimation];
+    
+    //关闭定时器
+    if (showTimer) {
+        [showTimer invalidate];
+        [self endBack];
+        showTimer = nil;
+    }
+}
+
+#pragma mark - CarReturnConfirmDelegate 确认还车代理
+
+//取消还车
+- (void)onClickWithCancelReturnCarEvent:(BookingItem *)item {
+    [self hideCarReturnConfirmAnimation];
+    [self showCarRunningAnimation];
+    
+}
+
+//确认还车
+- (void)onClickWithConfirmReturnCarEvent:(BookingItem *)item {
+    
+    //还车二次确认
+    XDYAlertView *alert = [[XDYAlertView alloc] initWithContentText:@"还车将结束计费并锁闭车门，请确认您在车外。" leftButtonTitle:@"取消" rightButtonTitle:@"确认还车" TopButtonTitle:@"确认还车"];
+    alert.cancelBlock = ^()
+    {
+        [StatisticsClass eventId:HC03];
+    };
+    alert.doneBlock = ^()
+    {
+        [StatisticsClass eventId:HC04];
+        
+        //还车
+        NSDictionary *paramDic = [NSDictionary dictionaryWithObjectsAndKeys:item.rentNum,@"rentNum",
+            @"",@"couponId",
+            nil];
+        [_homeService requestReturnCarWithService:paramDic];
+    };
+}
+
+#pragma mark - 定时器 NSTimer
+
+//每隔多长时间请求一次行程中接口
+- (void)startMinuteTimer:(int)second andType:(ActionType)type{
+    
+    __weak XDYHomeController *weakSelf = self;
+    
+    // 倒计时
+    taskID=  [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+        [weakSelf endBack];
+    }];
+    
+    // 计时器重启
+    if (showTimer) {
+        [showTimer invalidate];
+        [self endBack];
+        showTimer = nil;
+    }
+    
+    showTimer = [NSTimer eocScheduledTimerWithTimeInterval:second block:^{
+        if (type==_REQUEST_CarInBooking_) {
+            [weakSelf getCarInBooking];
+        }
+        
+        if (type==_REQUEST_CarInLease_) {
+            [weakSelf getCarInLease];
+        }
+    } repeats:YES];
+}
+
+- (void)getCarInLease {
+    
+    [_homeService requestCarInLeaseWithService]; //获取行程中车辆
+}
+
+- (void)getCarInBooking {
+    [_homeService requestCarInBookingWithService]; //获取预约中车辆
+    [_homeService requestCarInSearchInfoWithService]; //获取扫码租车车辆
+}
+
+-(void)endBack
+{
+    [[UIApplication sharedApplication] endBackgroundTask:taskID];
+    taskID = UIBackgroundTaskInvalid;
+}
+
+#pragma mark - Animation 动画
+
+//提示视图显示
+- (void)showTipAnimation:(NSString *)contentStr {
+    
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.tipView.top = 0;
+        _homeMapView.tipView.alpha = 1;
+        _homeMapView.tipTitleLab.text = contentStr;
+    }];
+}
+
+//提示视图隐藏
+- (void)hideTipAnimation {
+    
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.tipView.top = -64;
+        _homeMapView.tipView.alpha = 0;
+    }];
+}
+
+//查看网点车辆信息动画【预约用车】
+- (void)showCarAnimation {
+    
+    UIImageView *imageView = [self.carShowView viewWithTag:10000];
+    UIView *carView = [self.carShowView viewWithTag:100000];
+    
+    //大弹框动画
+    [UIView animateWithDuration:0.5 delay:0.1 usingSpringWithDamping:0.8 initialSpringVelocity:3.0 options:UIViewAnimationOptionCurveLinear animations:^{
+        
+        _homeMapView.scanUseCarBtn.alpha = 0;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height;
+        
+        self.carShowView.alpha = 1;
+        if (self.carShowView.carItems.count>0) {
+            self.carShowView.top = autoScaleH(347);
+            _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(380);
+        } else {
+            self.carShowView.top = autoScaleH(540);
+            _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(180);
+        }
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+    } completion:^(BOOL finished) {
+        
+    }];
+    
+    //车动画
+    [UIView animateKeyframesWithDuration:0.3 delay:0.1 options:UIViewKeyframeAnimationOptionCalculationModeLinear|UIViewAnimationOptionCurveEaseIn animations:^{
+        
+        imageView.top = 0;
+        imageView.alpha = 1;
+    } completion:nil];
+    
+    //字体动画
+    [UIView animateKeyframesWithDuration:0.3 delay:0.15 options:UIViewKeyframeAnimationOptionCalculationModeLinear|UIViewAnimationOptionCurveEaseIn animations:^{
+        
+        carView.top = imageView.bottom;
+        carView.alpha = 1;
+    } completion:nil];
+}
+
+- (void)hideCarAnimation {
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.scanUseCarBtn.alpha = 1;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height-autoScaleW(64);
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(64);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        self.carShowView.alpha = 0;
+        self.carShowView.top = autoScaleH(667);
+    } completion:^(BOOL finished) {
+    
+    }];
+}
+
+//预约计时动画【开锁用车】
+- (void)showCarTimerAnimation {
+    
+    if (self.bookingTimerView.alpha==0) {
+        [self.view addSubview:self.bookingTimerView];
+    }
+    
+    BookingItem *item;
+    if ([_carTimerFlag isEqualToString:@"1"]) {
+        item = _carBookingArr[0];
+    } else {
+        item = _carScanUseArr[0];
+    }
+
+    self.bookingTimerView.bookingItem = item;
+    
+    self.bookingTimerView.userLoc = _homeMapView.userLocation.coordinate;
+    
+    [_homeMapView showCarRoute:item];
+    
+    //大弹框动画
+    [UIView animateWithDuration:0.5 delay:0.1 usingSpringWithDamping:0.8 initialSpringVelocity:3.0 options:UIViewAnimationOptionCurveLinear animations:^{
+        
+        _homeMapView.scanUseCarBtn.alpha = 0;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height;
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(380);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.bookingTimerView.alpha = 1;
+        self.bookingTimerView.top = autoScaleH(347);
+        
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = YES;
+    }];
+    
+    if ([item.lockStatus isEqualToString:@"1"]) {
+        [self startMinuteTimer:10 andType:_REQUEST_CarInBooking_]; //每隔10秒刷新一次预约中接口
+    } else {
+        
+        [self startMinuteTimer:5 andType:_REQUEST_CarInLease_]; //每隔5秒刷新一次行程中接口
+    }
+}
+
+- (void)hideCarTimerAnimation {
+    
+    /* 清空地图上已有的路线. */
+    [_homeMapView.naviRoute removeFromMapView];
+    [_homeMapView removeSelectAnno];
+    
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.scanUseCarBtn.alpha = 1;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height-autoScaleW(64);
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(64);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.bookingTimerView.alpha = 0;
+        self.bookingTimerView.top = autoScaleH(667);
+    } completion:^(BOOL finished) {
+        _homeMapView.forbidAnnoClick = NO;
+    }];
+}
+
+//扫码开锁动画【扫码用车】
+- (void)showScanCarAnimation {
+    [self.view addSubview:self.scanUnLockView];
+    
+    self.scanUnLockView.item = _currentScanCarInfoItem;
+    
+    //大弹框动画
+    [UIView animateWithDuration:0.5 delay:0.1 usingSpringWithDamping:0.8 initialSpringVelocity:3.0 options:UIViewAnimationOptionCurveLinear animations:^{
+        
+        _homeMapView.scanUseCarBtn.alpha = 0;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height;
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(380);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.scanUnLockView.alpha = 1;
+        self.scanUnLockView.top = autoScaleH(347);
+        
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = YES;
+    }];
+    
+    //车动画
+    [UIView animateKeyframesWithDuration:0.3 delay:0.1 options:UIViewKeyframeAnimationOptionCalculationModeLinear|UIViewAnimationOptionCurveEaseIn animations:^{
+        
+        self.scanUnLockView.imgView.top = 0;
+        self.scanUnLockView.imgView.alpha = 1;
+    } completion:nil];
+    
+    //字体动画
+    [UIView animateKeyframesWithDuration:0.3 delay:0.15 options:UIViewKeyframeAnimationOptionCalculationModeLinear|UIViewAnimationOptionCurveEaseIn animations:^{
+        
+        self.scanUnLockView.carInfoView.top = self.scanUnLockView.imgView.bottom;
+        self.scanUnLockView.carInfoView.alpha = 1;
+    } completion:nil];
+}
+
+- (void)hideScanCarAnimation {
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.scanUseCarBtn.alpha = 1;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height-autoScaleW(64);
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(64);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.scanUnLockView.alpha = 0;
+        self.scanUnLockView.top = autoScaleH(667);
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = NO;
+    }];
+}
+
+//行程中动画
+- (void)showCarRunningAnimation {
+    
+    if (self.carRunningView.alpha==0) {
+        [self.bookingTimerView endTimer]; //结束定时器
+        [self.view addSubview:self.carRunningView];
+    }
+    self.carRunningView.item = _carLeaseArr[0];
+    
+    //大弹框动画
+    [UIView animateWithDuration:0.5 delay:0.1 usingSpringWithDamping:0.8 initialSpringVelocity:3.0 options:UIViewAnimationOptionCurveLinear animations:^{
+        
+        _homeMapView.scanUseCarBtn.alpha = 0;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height;
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(535);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.carRunningView.alpha = 1;
+        self.carRunningView.top = autoScaleH(187);
+        
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = YES;
+    }];
+    
+    [self startMinuteTimer:20 andType:_REQUEST_CarInLease_]; //每隔20秒刷新一次行程中接口
+}
+
+- (void)hideCarRunningAnimation {
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.scanUseCarBtn.alpha = 1;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height-autoScaleW(64);
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(64);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.carRunningView.alpha = 0;
+        self.carRunningView.top = autoScaleH(667);
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = NO;
+    }];
+}
+
+//还车确认动画【检查】
+- (void)showCarReturnConfirmAnimation {
+    [self.view addSubview:self.carReturnConfirmView];
+    
+    //单例视图恢复数据
+    [self.carReturnConfirmView recoverView];
+    
+    NSLog(@"行程中数据源：%@",_carLeaseArr[0]);
+    //传数据
+    self.carReturnConfirmView.bookingItem = _carLeaseArr[0];
+    
+    //大弹框动画
+    [UIView animateWithDuration:0.5 delay:0.1 usingSpringWithDamping:0.8 initialSpringVelocity:3.0 options:UIViewAnimationOptionCurveLinear animations:^{
+        
+        _homeMapView.scanUseCarBtn.alpha = 0;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height;
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(380);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.carReturnConfirmView.alpha = 1;
+        self.carReturnConfirmView.top = autoScaleH(347);
+        
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = YES;
+    }];
+}
+
+- (void)hideCarReturnConfirmAnimation {
+    [UIView animateWithDuration:0.3 animations:^{
+        _homeMapView.scanUseCarBtn.alpha = 1;
+        _homeMapView.scanUseCarBtn.top = _homeMapView.mapView.height-autoScaleW(64);
+        _homeMapView.locationBtn.top = _homeMapView.mapView.height-autoScaleH(64);
+        _homeMapView.clickLocateBtn.top = _homeMapView.locationBtn.top;
+        
+        self.carReturnConfirmView.alpha = 0;
+        self.carReturnConfirmView.top = autoScaleH(667);
+    } completion:^(BOOL finished) {
+        
+        _homeMapView.forbidAnnoClick = NO;
+    }];
+}
+
+#pragma mark - 状态栏动画
+
+- (BOOL)prefersStatusBarHidden {
+    
+    if (_leftMenuView.leftViewShow ==1) {
+        return YES;
+    }else{
+        return NO;
+    }
+}
+
+-(UIStatusBarAnimation)preferredStatusBarUpdateAnimation{
+    
+    return UIStatusBarAnimationSlide;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    [_homeMapView setDelegate];
+    
+    [self resetAuthStateCount];
+    
+    [super viewWillAppear:animated];
+    
+    [_homeMapView.locationManager startUpdatingLocation]; //重新定位
+    
+    [_leftMenuView.headView setNeedsLayout];
+    
+    if (![APPUtil isLoginWithJump:NO]) {
+            _navBarView.leftBtn.image = [UIImage imageNamed:@"img_avatar_logout"];
+    } else {
+        UIImage *cachedImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:@"headImg"];
+        if (cachedImage == nil) {
+            [_navBarView.leftBtn sd_setImageWithURL:[NSURL URLWithString:[UserInfo share].headImgUrl] placeholderImage:[UIImage imageNamed:@"img_avatar"]];
+        }else{
+            [_navBarView.leftBtn setImage:cachedImage];
+        }
+    }
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    
+    [_homeMapView clearDelegate];
+    
+    [self resetAuthStateCount];
+     
+    [super viewWillDisappear:animated];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+-(void)PalyServicePhoneNum{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSMutableString * str=[[NSMutableString alloc] initWithFormat:@"telprompt://%@",ServicePhoneNum];
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+        
+    });
+}
+
+-(void)pushAppStore{
+    if (IS_IOS_10) {
+        [[UIApplication sharedApplication]openURL:[NSURL URLWithString:@"itms-apps://itunes.apple.com/cn/app/xiao-ling-gou/id1129173295?mt=8"] options:@{} completionHandler:^(BOOL success) {
+            debugLog(@"跳转成功");
+        }];
+    }else{
+        [[UIApplication sharedApplication]openURL:[NSURL URLWithString:@"itms-apps://itunes.apple.com/cn/app/xiao-ling-gou/id1129173295?mt=8"]];
+    }
+}
+@end

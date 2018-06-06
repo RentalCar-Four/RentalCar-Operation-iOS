@@ -1,0 +1,65 @@
+//
+//  CarPopView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/22.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+/**
+ *  弹框公共View(预约/开锁)
+ *
+ */
+
+#import "BaseView.h"
+#import "CarItem.h"
+#import "BookingItem.h"
+
+typedef void (^BookingSuccBlock) (BookingItem *item); //预约成功回调
+
+@interface CarPopView : BaseView
+
+@property (nonatomic,copy) dispatch_block_t closeBlock;
+@property (nonatomic,copy) dispatch_block_t cancelBlock;
+@property (nonatomic,copy) dispatch_block_t confirmBlock;
+@property (nonatomic,copy) dispatch_block_t bookingFailBlock;
+@property (nonatomic,copy) BookingSuccBlock bookingSuccBlock;
+
+@property (nonatomic,copy) NSString *imgName;
+@property (nonatomic,copy) NSString *content;
+@property (nonatomic,copy) NSString *desc;
+@property (nonatomic,assign) NSRange range;
+@property (nonatomic,copy) NSString *leftTitle;
+@property (nonatomic,copy) NSString *rigthTitle;
+
+//数据源
+@property (nonatomic,strong) CarItem *carItem;
+@property (nonatomic,strong) BookingItem *bookingItem;
+@property (nonatomic,assign) int fromFlag; //1、预约用车 2、扫码用车
+
+/**
+ *  构造方法
+ *
+ *  @param imgName    图片名称
+ *  @param content    内容
+ *  @param desc       描述
+ *  @param range      主题颜色范围
+ *  @param leftTitle  左按钮标题
+ *  @param rigthTitle 右按钮标题
+ *
+ *  @return id
+ */
+- (id)initWithImageName:(NSString *)imgName
+        contentText:(NSString *)content
+        descText:(NSString *)desc
+        range:(NSRange)range
+    leftButtonTitle:(NSString *)leftTitle
+   rightButtonTitle:(NSString *)rigthTitle;
+
+- (void)closeAction; //关闭弹框
+
+- (void)startTimer; //开始倒计时
+
+- (void)showAnimation;
+
+@end

@@ -1,0 +1,51 @@
+//
+//  ReturnCarAnnotationView.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/21.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "ReturnCarAnnotationView.h"
+
+@interface ReturnCarAnnotationView ()
+{
+    UIImageView *_shadowImgView; //点阴影图片
+}
+
+@end
+
+@implementation ReturnCarAnnotationView
+
+- (id)initWithAnnotation:(id<MAAnnotation>)annotation reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithAnnotation:annotation reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        self.frame = CGRectMake(0, 0, autoScaleW(56), autoScaleW(56));
+        
+        _shadowImgView = [[UIImageView alloc] initWithFrame:CGRectMake(autoScaleW(18), autoScaleW(50), autoScaleW(12), autoScaleW(6))];
+        _shadowImgView.image = [UIImage imageNamed:@"img_LatPointShadow"];
+        [self addSubview:_shadowImgView];
+        
+        _imgView = [[UIImageView alloc] initWithFrame:CGRectMake(autoScaleW(2), autoScaleW(7), autoScaleW(44), autoScaleW(50))];
+        _imgView.image = [UIImage imageNamed:@"img_LatPoint"];
+        [self addSubview:_imgView];
+        
+        _stateImgView = [[UIImageView alloc] initWithFrame:CGRectMake(autoScaleW(32), autoScaleW(1), autoScaleW(20), autoScaleW(20))];
+        [self addSubview:_stateImgView];
+    }
+    
+    return self;
+}
+
+- (void)setItem:(StationItem *)item {
+    if ([item.returnStatus isEqualToString:@"1"]) { //可还
+        _stateImgView.image = [UIImage imageNamed:@"icon_ReturnPoint"];
+    }
+    
+    if ([item.returnStatus isEqualToString:@"2"]) { //已满
+        _stateImgView.image = [UIImage imageNamed:@"icon_ReturnPoint_full"];
+    }
+}
+
+@end

@@ -1,0 +1,66 @@
+//
+//  ActionType.h
+//
+//  Created by hu on 16/10/20.
+//  Copyright © 2016年 hu. All rights reserved.
+//
+
+#ifndef ActionType_h
+#define ActionType_h
+
+
+//typedef void (^ExcuteBlock)(id param);
+
+
+typedef NS_ENUM(NSInteger,ActionType){
+    
+    /**默认*/
+    _REQUEST_DEFAULT_,
+    
+    _REQUEST_VALIDATE_,
+    _REQUEST_LOGIN_,
+    _REQUEST_STATIONFORLEASE_,
+    _REQUEST_SEARCHSTATION_,
+    _REQUEST_STATIONCarList_,
+    _REQUEST_CarInBooking_,
+    _REQUEST_CarInSearchInfo_,
+    _REQUEST_CarInLease_,
+    _REQUEST_CancelBookingCar_,
+    _REQUEST_ReturnCar_,
+    _REQUEST_ChekItemForReturnCar_,
+    _REQUEST_AUTHSTATE_,
+    _REQUEST_SearchCarForLease_,
+    _REQUEST_CityToArea_,
+    _REQUEST_GetRentPwd_,
+    
+    //服务协议
+    _REQUEST_GetAgreement_,
+    _REQUEST_GeterSvicePhone_,
+    //获取版本信息
+    _REQUEST_getAppVersion_,
+    
+    //身份验证
+    _REQUEST_ID_,
+    _REQUEST_DrivingID_,
+    _REQUEST_FaceID_,
+    _REQUEST_FaceID_Fill,
+    _REQUEST_ProID_,
+    _REQUEST_ProDrivingID_,
+    _REQUEST_ProFaceID_,
+    //行程列表
+    _REQUEST_LeaseList_,
+    //获取用户账户
+    _REQUEST_MemberAccount_,
+    //获取优惠券列表
+    _REQUEST_CouponList_,
+    //更新用户信息成功
+    _REQUEST_AUTHSTATE_OK
+    
+    
+
+};
+
+
+
+
+#endif

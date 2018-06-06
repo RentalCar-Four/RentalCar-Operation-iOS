@@ -1,0 +1,328 @@
+//
+//  CouponCell.m
+//  RentalCar
+//
+//  Created by Hulk on 2017/4/1.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "CouponCell.h"
+
+@interface CouponCell ()
+{
+    UILabel *quanTypeLable;
+    UILabel *quanTypeTime;
+    UILabel *quanTypeQuota;
+    UILabel *quanTypeInfo;
+    UILabel *quanDiqu;
+    UILabel *quanData;
+    
+}
+@property(nonatomic,strong)UIView *cellcontentView;
+@property(nonatomic,strong)UIImageView *backImg;
+@property(nonatomic,strong)UIImageView *selectedImg;
+@property(nonatomic,copy)NSString *changeString1;
+@property(nonatomic,copy)NSString *changeString2;
+
+
+
+@end
+
+@implementation CouponCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+    debugLog(@"%d",selected);
+    // Configure the view for the selected state
+}
+//使用自己的选中方法，方便判断
+-(void)OnSelected:(BOOL)selected animated:(BOOL)animated{
+    
+    debugLog(@"%d",selected);
+    //暂时屏蔽点击方法
+        if (selected == YES) {
+            [_selectedImg setHidden:NO];
+            
+        }else{
+            [_selectedImg setHidden:YES];
+        }
+}
+
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+    }
+    
+    return self;
+}
+
+- (void)setupDetailView{
+    
+    //添加Feed具体内容
+    _cellcontentView = [[UIView alloc]initWithFrame:CGRectMake(10, 10, SCREEN_WIDTH-20, 0)];
+    
+    //cell设置
+    self.backgroundColor = [UIColor colorWithHexString:@"#FBFBFB"];
+    self.opaque = YES;
+    [_cellcontentView.layer setMasksToBounds:YES];
+    _cellcontentView.layer.cornerRadius = autoScaleH(3);
+    
+//    _cellcontentView.backgroundColor = [UIColor redColor];
+    
+    [self.contentView addSubview:self.cellcontentView];
+    
+    CGRect contentRect = _cellcontentView.frame;
+    
+    contentRect.size.height = autoScaleH(120)-10;
+    _cellcontentView.frame = contentRect;
+    
+    
+    //添加工具条
+    
+    [self BuildUI];
+}
+
+-(void)BuildUI{
+    _backImg = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, _cellcontentView.width, _cellcontentView.height)];
+    _selectedImg = [[UIImageView alloc]initWithFrame:CGRectMake(_backImg.right-autoScaleW(60), _backImg.height/2-autoScaleH(5), autoScaleW(60), autoScaleH(60))];
+    debugLog(@"%ld",self.indexpath.section);
+    [_selectedImg setImage:[UIImage imageNamed:@"img_ticket_selected"]];
+    [_selectedImg setHidden:YES];
+    [self BuildLable];
+    
+    
+    if (self.indexpath.section == 0 &&_cellType == 1) {//原代时券
+            [_backImg setImage:[UIImage imageNamed:@"img_ticket_old"]];
+            [_cellcontentView addSubview:_backImg];
+            [_cellcontentView addSubview:_selectedImg];
+            [quanTypeLable setText:@"老用户代时券"];
+            [quanDiqu setText:_model.areaLimitDesc];
+            [quanTypeInfo setText:_model.useLimitDesc];
+            [quanData setText:[NSString stringWithFormat:@"有效期至 %@",_model.expirationDate]];
+        [self setCellInfoData:_model.amount changeString2:@"分钟" cellType:_cellType];
+    }else if(self.indexpath.section == 0 &&_cellType == 2){//原代金券
+            [_backImg setImage:[UIImage imageNamed:@"img_ticket_old"]];
+            [_cellcontentView addSubview:_backImg];
+            [_cellcontentView addSubview:_selectedImg];
+            [quanDiqu setText:_model.areaLimitDesc];
+            [quanTypeInfo setText:_model.useLimitDesc];
+            [quanTypeTime setText:@"剩余余额"];
+//            [quanTypeQuota setFrame:CGRectMake(0, quanTypeTime.bottom-autoScaleH(10), autoScaleW(130), autoScaleH(35))];
+//            [quanTypeTime setHidden:YES];
+            [self setCellInfoData:@"¥" changeString2:_model.amount cellType:_cellType];
+            [quanData setText:[NSString stringWithFormat:@"有效期至 %@",_model.expirationDate]];
+    }else if(self.indexpath.section == 0 &&_cellType == 3){//新金额优惠券
+            [_backImg setImage:[UIImage imageNamed:@"img_ticket"]];
+            [_cellcontentView addSubview:_backImg];
+            [_cellcontentView addSubview:_selectedImg];
+            [quanTypeLable setTextColor:[UIColor colorWithHexString:@"#FF885A"]];
+            [quanDiqu setText:_model.areaLimitDesc];
+            [quanTypeQuota setFrame:CGRectMake(0, quanTypeTime.bottom-autoScaleH(10), autoScaleW(130), autoScaleH(35))];
+            [quanTypeTime setHidden:YES];
+            [quanTypeLable setText:@"分时用车券"];
+            [quanTypeInfo setText:_model.useLimitDesc];
+            
+            [quanData setTextColor:[UIColor colorWithHexString:@"#FF885A"]];
+            [self setCellInfoData:@"¥" changeString2:_model.amount cellType:_cellType];
+            [quanData setText:[NSString stringWithFormat:@"有效期至 %@",_model.expirationDate]];
+        
+        
+        
+    }else if(self.indexpath.section == 1){
+    //过期券
+        [self ticketDisabled];
+    }else{
+        [_backImg setImage:[UIImage imageNamed:@"img_ticket_old"]];
+        [_cellcontentView addSubview:_backImg];
+        [_cellcontentView addSubview:_selectedImg];
+        [quanTypeLable setText:@"打折券"];
+        [quanDiqu setText:_model.areaLimitDesc];
+        [quanTypeInfo setText:_model.useLimitDesc];
+        [quanData setText:[NSString stringWithFormat:@"有效期至 %@",_model.expirationDate]];
+    }
+    
+}
+-(void)BuildLable{
+    quanTypeLable = [[UILabel alloc]initWithFrame:CGRectMake(0, autoScaleH(22), autoScaleW(130), autoScaleH(17))];
+    [quanTypeLable setText:@"老用户代金券"];
+    [quanTypeLable setFont:[UIFont systemFontOfSize:autoScaleH(12) weight:autoScaleH(1)]];
+    [quanTypeLable setTextColor:[UIColor colorWithHexString:@"#5AC0FF"]];
+    [quanTypeLable setTextAlignment:NSTextAlignmentCenter];
+    
+    [_backImg addSubview:quanTypeLable];
+    
+    quanTypeTime = [[UILabel alloc]initWithFrame:CGRectMake(0,quanTypeLable.bottom+ autoScaleH(8), autoScaleW(130), autoScaleH(14))];
+    [quanTypeTime setText:@"剩余时长"];
+    [quanTypeTime setFont:[UIFont systemFontOfSize:autoScaleH(10)]];
+    [quanTypeTime setTextColor:[UIColor colorWithHexString:@"#959595"]];
+    [quanTypeTime setTextAlignment:NSTextAlignmentCenter];
+    [_backImg addSubview:quanTypeTime];
+    
+    
+    quanTypeQuota = [[UILabel alloc]initWithFrame:CGRectMake(0,quanTypeTime.bottom+ autoScaleH(8), autoScaleW(130), autoScaleH(35))];
+    
+    [quanTypeQuota setTextAlignment:NSTextAlignmentCenter];
+    [_backImg addSubview:quanTypeQuota];
+    
+       quanTypeInfo = [[UILabel alloc]initWithFrame:CGRectMake(quanTypeLable.right+autoScaleW(26),autoScaleH(19), autoScaleW(180), autoScaleH(17))];
+    [quanTypeInfo setText:@"优先抵扣 用完为止"];
+    [quanTypeInfo setTextColor:[UIColor colorWithHexString:@"#7F7F7F"]];
+    [quanTypeInfo setFont:[UIFont systemFontOfSize:autoScaleH(12)]];
+    [_backImg addSubview:quanTypeInfo];
+    
+    quanDiqu = [[UILabel alloc]initWithFrame:CGRectMake(quanTypeLable.right+autoScaleW(26),quanTypeInfo.bottom+autoScaleH(5), autoScaleW(180), autoScaleH(17))];
+    
+    [quanDiqu setText:@"仅限宁海地区使用"];
+    [quanDiqu setTextColor:[UIColor colorWithHexString:@"#7F7F7F"]];
+    [quanDiqu setFont:[UIFont systemFontOfSize:autoScaleH(12)]];
+    [_backImg addSubview:quanDiqu];
+    
+    
+    quanData = [[UILabel alloc]initWithFrame:CGRectMake(quanTypeLable.right+autoScaleW(26),quanDiqu.bottom+autoScaleH(26), autoScaleW(180), autoScaleH(17))];
+    
+    [quanData setText:@"有效期至 2017.12.31"];
+    [quanData setTextColor:[UIColor colorWithHexString:@"#5AC0FF"]];
+    [quanData setFont:[UIFont systemFontOfSize:autoScaleH(12)]];
+    [_backImg addSubview:quanData];
+    
+}
+//对富文本进行操作
+- (NSMutableAttributedString *)changeLabelColorOriginalString:(NSString *)originalString changeString1:(NSString *)changeString1 changeString2:(NSString *)changeString2 cellType:(int)cellType{
+    NSRange changeStringRange1 = [originalString rangeOfString:changeString1];
+    NSRange changeStringRange2 = [originalString rangeOfString:changeString2];
+    NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:originalString];
+    switch (cellType) {
+        case 1:
+        {
+            [attributedString addAttribute:NSFontAttributeName value:kAvantiBoldSize(19) range:changeStringRange1];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#5AC0FF"] range:changeStringRange1];
+            
+            [attributedString addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:autoScaleH(12) weight:1] range:changeStringRange2];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#5AC0FF"] range:changeStringRange2];
+            return attributedString;
+        }
+            break;
+        case 2:
+        {
+            
+            [attributedString addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:autoScaleH(18) weight:1] range:changeStringRange1];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#5AC0FF"] range:changeStringRange1];
+            
+            [attributedString addAttribute:NSFontAttributeName value:kAvantiBoldSize(19) range:changeStringRange2];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#5AC0FF"] range:changeStringRange2];
+            return attributedString;
+        }
+            break;
+        case 3:
+        {
+            
+            [attributedString addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:autoScaleH(18) weight:1] range:changeStringRange1];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#FF885A"] range:changeStringRange1];
+            
+            [attributedString addAttribute:NSFontAttributeName value:kAvantiBoldSize(19) range:changeStringRange2];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#FF885A"] range:changeStringRange2];
+            return attributedString;
+        }
+            break;
+            
+            //特殊样式
+        case 10:
+        {
+            
+            [attributedString addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:autoScaleH(18) weight:1] range:changeStringRange1];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#C7C7C7"] range:changeStringRange1];
+            
+            [attributedString addAttribute:NSFontAttributeName value:kAvantiBoldSize(19) range:changeStringRange2];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#C7C7C7"] range:changeStringRange2];
+            return attributedString;
+        }
+            break;
+            
+            
+        case 11:
+        {
+            
+             [attributedString addAttribute:NSFontAttributeName value:kAvantiBoldSize(19) range:changeStringRange1];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#C7C7C7"] range:changeStringRange1];
+            
+            [attributedString addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:autoScaleH(12) weight:1] range:changeStringRange2];
+            [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithHexString:@"#C7C7C7"] range:changeStringRange2];
+            return attributedString;
+        }
+            break;
+            
+        default:
+            break;
+    }
+    return attributedString;
+   
+}
+
+-(void)setCellInfoData:(NSString *)changeString1 changeString2:(NSString *)changeString2 cellType:(int)cellType{
+    _changeString1 = changeString1;
+    _changeString2 = changeString2;
+    NSString *originalString = [NSString stringWithFormat:@"%@ %@",_changeString1,_changeString2];
+    
+    quanTypeQuota.attributedText = [self changeLabelColorOriginalString:originalString changeString1:_changeString1 changeString2:_changeString2 cellType:cellType];
+}
+
+-(void)ticketDisabled{
+    [_backImg setImage:[UIImage imageNamed:@"img_ticket_disabled"]];
+    [_cellcontentView addSubview:_backImg];
+    [quanTypeLable setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanTypeTime setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanTypeQuota setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanTypeInfo setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanDiqu setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanData setTextColor:[UIColor colorWithHexString:@"#C7C7C7"]];
+    [quanDiqu setText:_model.areaLimitDesc];
+    [quanTypeInfo setText:_model.useLimitDesc];
+    [quanData setText:[NSString stringWithFormat:@"已于 %@ 过期",_model.expirationDate]];
+    
+    
+    switch (_cellType) {
+        case 1:
+        {
+            [quanTypeLable setText:@"老用户代时券"];
+            [quanTypeQuota setFrame:CGRectMake(0,quanTypeTime.bottom+ autoScaleH(8), autoScaleW(130), autoScaleH(35))];
+            [quanTypeTime setHidden:NO];
+             [self setCellInfoData:_model.amount changeString2:@"分钟" cellType:11];
+       
+        }
+            break;
+        case 2:
+        {
+//            [quanDiqu setText:_model.areaLimitDesc];
+//            [quanTypeInfo setText:_model.useLimitDesc];
+            [quanTypeQuota setFrame:CGRectMake(0, quanTypeTime.bottom-autoScaleH(10), autoScaleW(130), autoScaleH(35))];
+            [quanTypeTime setHidden:YES];
+            [self setCellInfoData:@"¥" changeString2:_model.amount cellType:10];
+            
+//            [quanData setText:[NSString stringWithFormat:@"有效期至 %@",_model.expirationDate]];
+            
+        }
+            break;
+        case 3:
+        {
+            [quanTypeQuota setFrame:CGRectMake(0, quanTypeTime.bottom-autoScaleH(10), autoScaleW(130), autoScaleH(35))];
+            [quanTypeTime setHidden:YES];
+            [quanTypeLable setText:@"分时用车券"];
+            [self setCellInfoData:@"¥" changeString2:_model.amount cellType:_cellType];
+            
+        }
+            break;
+            
+        default:
+            break;
+    }
+    
+    
+}
+@end

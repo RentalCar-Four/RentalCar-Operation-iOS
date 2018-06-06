@@ -1,0 +1,127 @@
+//
+//  SignKeyUtil.m
+//  RentalCar
+//
+//  Created by hu on 17/3/3.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "SignKeyUtil.h"
+#import "NSString+XDYUtil.h"
+#import "NSString+MD5.h"
+
+@implementation SignKeyUtil
+
++ (NSString *)getNonceString{
+    
+    CFUUIDRef uuid_ref = CFUUIDCreate(NULL);
+    
+    CFStringRef uuid_string_ref = CFUUIDCreateString(NULL, uuid_ref);
+    
+    NSString *uuid = [NSString stringWithString:(__bridge NSString *)uuid_string_ref];
+    
+    CFRelease(uuid_ref);
+    
+    CFRelease(uuid_string_ref);
+    
+    return [[uuid lowercaseString] stringByReplacingOccurrencesOfString:@"-" withString:@""];
+    
+}
+
+
++ (NSString *)createGetSignUrl:(NSString *)url andSecret:(NSString *)secretKey{
+    
+    
+    NSMutableDictionary *params = [self unSerialize:url];
+    
+    NSArray *myKeys = [params allKeys];
+    NSArray *sortedKeys = [myKeys sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
+    
+    NSMutableString *serailizedKey = [self serialize:params and: sortedKeys];
+    
+    NSString *jointStr = [NSString stringWithFormat:@"&key=%@",secretKey];
+    [serailizedKey appendString:jointStr];
+    
+    NSString *sign = [[NSString md5To32bit:serailizedKey] uppercaseString];
+    
+    NSString *result = [NSString stringWithFormat:@"?%@&sign=%@",url,sign];
+    
+    return result;
+    
+}
+
+
++ (NSString *)createPostSignUrl:(NSString *)url andSecret:(NSString *)secretKey{
+    
+    
+    NSMutableDictionary *params = [self unSerialize:url];
+    
+    NSArray *myKeys = [params allKeys];
+    NSArray *sortedKeys = [myKeys sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
+    
+    NSMutableString *serailizedKey = [self serialize:params and: sortedKeys];
+    
+    NSString *jointStr = [NSString stringWithFormat:@"&key=%@",secretKey];
+    [serailizedKey appendString:jointStr];
+    
+    return [[NSString md5To32bit:serailizedKey] uppercaseString];
+    
+}
+    
++ (NSMutableDictionary *)unSerialize:(NSString *)url{
+    
+    NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+    
+    NSRange range = [url rangeOfString:@"?"];
+    
+    NSString *paramStr = url;
+    
+    if (range.length) {
+        
+        NSUInteger index = range.location + 1;
+        paramStr = [url substringFromIndex:index];
+    }
+
+    NSArray *arr = [paramStr componentsSeparatedByString:@"&"];
+    
+    for (NSString *item in arr) {
+        
+        NSArray *arrItem = [item componentsSeparatedByString:@"="];
+        if ([arrItem count] > 0) {
+            
+            NSString *key = arrItem[0];
+            NSString *value = arrItem[1];
+            if (![NSString isEmpty:value]) {
+                [dictM setObject:value forKey:key];
+
+            }
+            
+        }
+
+    }
+    
+    return dictM;
+}
+
++ (NSMutableString*)serialize:(NSMutableDictionary *)params and:(NSArray *)keys{
+    
+    NSMutableString *serialzeStr = [NSMutableString string];
+    for (NSString *key in keys) {
+        
+        NSString *value = [params valueForKey:key];
+        NSString *defStr = [NSString stringWithFormat:@"%@=%@&",key,value];
+        [serialzeStr appendString:defStr];
+        
+    }
+    
+    NSRange range = [serialzeStr rangeOfString:@"&" options:NSBackwardsSearch];
+    
+    [serialzeStr deleteCharactersInRange:range];
+
+    return serialzeStr;
+    
+}
+
+
+
+@end

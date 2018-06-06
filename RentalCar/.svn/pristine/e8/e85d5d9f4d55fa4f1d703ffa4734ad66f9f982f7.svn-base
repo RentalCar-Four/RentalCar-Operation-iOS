@@ -1,0 +1,424 @@
+//
+//  EditUserInfoViewController.m
+//  RentalCar
+//
+//  Created by Hulk on 2017/3/30.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "EditUserInfoViewController.h"
+#import "TZImagePickerController.h"
+#import "TZImageManager.h"
+#import "EditUserInfoService.h"
+#import "XDYHomeService.h"
+#import "BaseNavController.h"
+
+@interface EditUserInfoViewController ()<UINavigationControllerDelegate,TZImagePickerControllerDelegate,UIImagePickerControllerDelegate,UIAlertViewDelegate,ObserverServiceDelegate>
+
+@property (weak, nonatomic) IBOutlet UIImageView *HeadView;
+@property (weak, nonatomic) IBOutlet UIView *userHeadViewCell;
+@property (nonatomic, strong) UIImagePickerController *imagePickerVc;
+@property (nonatomic,assign)BOOL canCa;
+@property (nonatomic,strong)UIImage *userImg;
+@property(nonatomic,strong)EditUserInfoService *service;
+@property(nonatomic,strong)XDYHomeService *homeService;
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *sanjiaoWidth;
+@property (weak, nonatomic) IBOutlet UITextField *textViewClick;
+@property(nonatomic,assign)BOOL IMGUpBool;
+@property(nonatomic,assign)BOOL TXTUpBool;
+
+@property (nonatomic,assign) int flag; //1、拍照 2、相册选择
+
+@end
+
+@implementation EditUserInfoViewController
+
+-(void)viewDidLayoutSubviews{
+    [super viewDidLayoutSubviews];
+    [self.HeadView setBackgroundColor:[UIColor whiteColor]];
+    [self.HeadView setCornerRadius:self.HeadView.width *0.5];
+    
+    [self.HeadView.layer setMasksToBounds:YES];
+    
+    self.title =@"编辑资料";
+    
+    [self addItemForLeft:RightBtn Title:@"保存" Titlecolor:[UIColor colorWithHexString:@"#25D880"] action:@selector(userSave) spaceWidth:10];
+    [self.userHeadViewCell addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(userHeadClick:)]];
+    
+    [self.textViewClick addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
+}
+
+#pragma mark - 文本框内容改变
+
+- (void)textFieldDidChange:(UITextField *)textField
+{
+    NSInteger kMaxLength = 12;
+    NSString *toBeString = textField.text;
+    NSString *lang = [[UIApplication sharedApplication]textInputMode].primaryLanguage; //ios7之前使用[UITextInputMode currentInputMode].primaryLanguage
+    if ([lang isEqualToString:@"zh-Hans"]) { //中文输入
+        UITextRange *selectedRange = [textField markedTextRange];
+        //获取高亮部分
+        UITextPosition *position = [textField positionFromPosition:selectedRange.start offset:0];
+        if (!position) {// 没有高亮选择的字，则对已输入的文字进行字数统计和限制
+            if (toBeString.length > kMaxLength) {
+                textField.text = [toBeString substringToIndex:kMaxLength];
+            }
+        }
+        else{//有高亮选择的字符串，则暂不对文字进行统计和限制
+        }
+    }else{//中文输入法以外的直接对其统计限制即可，不考虑其他语种情况
+        if (toBeString.length > kMaxLength) {
+            textField.text = [toBeString substringToIndex:kMaxLength];
+        }
+    }
+}
+
+-(void)viewWillLayoutSubviews{
+    [super viewWillLayoutSubviews];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:YES];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(goEditStart:) name:UITextFieldTextDidBeginEditingNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(goEditDone:) name:UITextFieldTextDidEndEditingNotification object:nil];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _IMGUpBool =NO;
+    _TXTUpBool =NO;
+    if (self.userImg !=nil) {
+        [self.HeadView setImage:self.userImg];
+    }else{
+        
+        UIImage *cachedImage = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:@"headImg"];
+        
+        if (cachedImage == nil) {
+            [self.HeadView sd_setImageWithURL:[NSURL URLWithString:[UserInfo share].headImgUrl] placeholderImage:[UIImage imageNamed:@"img_avatar"]];
+            
+        }else{
+            [self.HeadView setImage:cachedImage];
+        }
+    }
+    
+    if ([[UserInfo share].nickName isEqualToString:@""]) {
+        [self.textViewClick setText:[UserInfo share].mobile];
+    }else{
+        [self.textViewClick setText:[UserInfo share].nickName];
+    }
+    
+    [self.view setBackgroundColor:[UIColor colorWithHexString:@"#FBFBFB"]];
+    
+    _service =[[EditUserInfoService alloc]init];
+    _service.serviceDelegate = self;
+    _homeService =[[XDYHomeService alloc]init];
+    _homeService.serviceDelegate = self;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+-(void)dealloc{
+    self.userImg =nil;
+}
+
+-(void)userSave{
+    
+    if ([APPUtil isBlankString:self.textViewClick.text]) {
+        [APPUtil showToast:@"未输入昵称无法保存"];
+        return;
+    }
+    
+    debugLog(@"保存");
+    debugLog(@"%@",self.userImg);
+    if (_userImg !=nil) {
+        NSString *pathFile = [_userImg saveImage];
+        NSString *token =[UserInfo share].token;
+        NSMutableDictionary *param = [[NSMutableDictionary alloc] init];
+        [param setObject:token forKey:@"token"];
+        [param setObject:pathFile forKey:@"headImg"];
+        
+        [self.service requestUploadHeadImgWithService:param success:^(id data) {
+            debugLog(@"%@",data);
+            _IMGUpBool =YES;
+            [self uploadState];
+        } fail:^(NSString * error) {
+            _IMGUpBool =NO;
+            [CustomAlertView alertWithMessage:error];
+        }];
+    }
+    
+    debugLog(@"%@",self.textViewClick.text);
+    if (![self.textViewClick.text isEqualToString:@""]) {
+        NSMutableDictionary *param = [[NSMutableDictionary alloc] init];
+        [param setObject:[self.textViewClick.text stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] forKey:@"nickName"];
+        [self.service requestUploadInfoWithService:param success:^(id data) {
+            debugLog(@"%@",data);
+            _TXTUpBool =YES;
+            [self uploadState];
+        } fail:^(NSString * error) {
+            _TXTUpBool =NO;
+            [CustomAlertView alertWithMessage:error];
+        }];
+    }
+}
+
+-(void)uploadState{
+    //用户没上传头像或没上传昵称
+    if (_userImg ==nil) {
+        _IMGUpBool =YES;
+    }
+    
+    if (_TXTUpBool ==YES && _IMGUpBool == YES) {
+        [TipUtil showSuccTip:@"保存成功"];
+        //更新用户信息
+        [self updateUserInfo];
+    }else{
+        debugLog(@"%d保存头像状态",_IMGUpBool);
+        debugLog(@"%d保存昵称状态",_TXTUpBool);
+    }
+}
+
+-(void)onSuccess:(id)data withType:(ActionType)type{
+    switch (type) {
+        case _REQUEST_AUTHSTATE_OK:
+        {
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+-(void)userHeadClick:(UIView *)view{
+    
+    [UIAlertController showActionSheetInViewController:self withTitle:nil message:nil cancelButtonTitle:@"取消" destructiveButtonTitle:nil otherButtonTitles:@[@"拍照",@"相册选择"] popoverPresentationControllerBlock:^(UIPopoverPresentationController * _Nonnull popover) {
+        
+    } tapBlock:^(UIAlertController * _Nonnull controller, UIAlertAction * _Nonnull action, NSInteger buttonIndex) {
+        
+        if (buttonIndex ==2) {
+            
+            self.flag = 1;
+            
+            //拍照
+            if ([APPUtil isCameraPermissionOn]) {
+                UIImagePickerController *imagePickerController = [[UIImagePickerController alloc] init];
+                imagePickerController.sourceType = UIImagePickerControllerSourceTypeCamera;
+                imagePickerController.allowsEditing = YES;
+                imagePickerController.delegate = self;
+                
+                if([[[UIDevice currentDevice] systemVersion] floatValue]>=8.0) {
+                    self.modalPresentationStyle=UIModalPresentationOverCurrentContext;
+                }
+                [self presentViewController:imagePickerController animated:NO completion:nil];
+            }
+        }
+        
+        if(buttonIndex ==3){
+            
+            self.flag = 2;
+            
+            //本地相册
+            UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
+            pickerController.toolbar.backgroundColor = [UIColor whiteColor];
+            pickerController.toolbar.barTintColor = [UIColor whiteColor];
+            pickerController.navigationBar.backgroundColor = [UIColor whiteColor];
+            [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent];
+            pickerController.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
+            pickerController.allowsEditing = YES;
+            pickerController.delegate=self;
+            pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+            [self presentViewController:pickerController animated:NO completion:^{}];
+            
+//            //用户选择
+//            TZImagePickerController *imagePickerVc = [[TZImagePickerController alloc] initWithMaxImagesCount:1 columnNumber:1 delegate:self pushPhotoPickerVc:YES];
+//            imagePickerVc.allowTakePicture = NO;
+//            imagePickerVc.showSelectBtn = NO;
+//            imagePickerVc.allowCrop = YES;
+//            imagePickerVc.needCircleCrop = NO;
+//            //            imagePickerVc.circleCropRadius = 100;
+//            
+//            // 2. 在这里设置imagePickerVc的外观
+//            imagePickerVc.navigationBar.barTintColor = [UIColor redColor];
+//            imagePickerVc.oKButtonTitleColorDisabled = kBlueColor;
+//            imagePickerVc.oKButtonTitleColorNormal = kBlueColor;
+//            
+//            [imagePickerVc setDidFinishPickingPhotosHandle:^(NSArray<UIImage *> *photos, NSArray *assets, BOOL isSelectOriginalPhoto) {
+//                debugLog(@"%@",photos);
+//                
+//                UIImage *smallImage = [UIImage imageWithImageSimple:photos[0] scaledToSize:CGSizeMake(150, 150)];
+//                self.userImg =smallImage;
+//                [self.HeadView setImage:smallImage];
+//            }];
+//            
+//            [self presentViewController:imagePickerVc animated:YES completion:nil];
+        }
+    }];
+}
+
+- (UIImagePickerController *)imagePickerVc {
+    if (_imagePickerVc == nil) {
+        _imagePickerVc = [[UIImagePickerController alloc] init];
+        _imagePickerVc.delegate = self;
+        // set appearance / 改变相册选择页的导航栏外观
+        _imagePickerVc.allowsEditing =YES;
+        _imagePickerVc.navigationBar.barTintColor = self.navigationController.navigationBar.barTintColor;
+        _imagePickerVc.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
+        UIBarButtonItem *tzBarItem, *BarItem;
+        if (iOS9Later) {
+            tzBarItem = [UIBarButtonItem appearanceWhenContainedInInstancesOfClasses:@[[TZImagePickerController class]]];
+            BarItem = [UIBarButtonItem appearanceWhenContainedInInstancesOfClasses:@[[UIImagePickerController class]]];
+        } else {
+            tzBarItem = [UIBarButtonItem appearanceWhenContainedIn:[TZImagePickerController class], nil];
+            BarItem = [UIBarButtonItem appearanceWhenContainedIn:[UIImagePickerController class], nil];
+        }
+        NSDictionary *titleTextAttributes = [tzBarItem titleTextAttributesForState:UIControlStateNormal];
+        [BarItem setTitleTextAttributes:titleTextAttributes forState:UIControlStateNormal];
+    }
+    return _imagePickerVc;
+}
+
+- (void)imagePickerController:(UIImagePickerController*)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+    debugLog(@"%@",info);
+    
+    [picker dismissViewControllerAnimated:YES completion:nil];
+    
+//    if (self.flag==1) {
+        dispatch_async(dispatch_get_global_queue(0, 0), ^{
+            UIImage *image = info[UIImagePickerControllerEditedImage];
+            NSData *data=UIImageJPEGRepresentation(image, 0.01);
+            image = [UIImage imageWithData:data];
+            //准备上传图片
+            self.userImg = image;
+            [self.HeadView setImage:image];
+        });
+//        return;
+//    }
+    
+//    NSString *type = [info objectForKey:UIImagePickerControllerMediaType];
+//    if ([type isEqualToString:@"public.image"]) {
+//        TZImagePickerController *tzImagePickerVc = [[TZImagePickerController alloc] initWithMaxImagesCount:1 delegate:self];
+//        tzImagePickerVc.needCircleCrop = YES;
+//        
+//        [tzImagePickerVc showProgressHUD];
+//        UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
+//        // save photo and get asset / 保存图片，获取到asset
+//        [[TZImageManager manager] savePhotoWithImage:image completion:^(NSError *error){
+//            if (error) {
+//                [tzImagePickerVc hideProgressHUD];
+//                NSLog(@"图片保存失败 %@",error);
+//            } else {
+//                [tzImagePickerVc hideProgressHUD];
+//                debugLog(@"%@",image);
+//                //准备上传图片
+//                
+//                UIImage *smallImage = [UIImage imageWithImageSimple:image scaledToSize:CGSizeMake(150, 150)];
+//                self.userImg = smallImage;
+//                [self.HeadView setImage:smallImage];
+//            }
+//        }];
+//    }
+}
+
+#pragma mark - 检查相机权限
+- (BOOL)canUserCamear{
+    AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    if (authStatus == AVAuthorizationStatusDenied) {
+        UIAlertView *alertView = [[UIAlertView alloc]initWithTitle:@"请打开相机权限" message:@"设置-隐私-相机" delegate:self cancelButtonTitle:@"确定" otherButtonTitles:@"取消", nil];
+        alertView.tag = 100;
+        [alertView show];
+        return NO;
+    }
+    else{
+        return YES;
+    }
+    return YES;
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex{
+    
+    if (buttonIndex == 0 && alertView.tag == 100) {
+        
+        NSURL * url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+        
+        if([[UIApplication sharedApplication] canOpenURL:url]) {
+            
+            [[UIApplication sharedApplication] openURL:url];
+            
+        }
+    }
+}
+
+- (void)goEditStart:(NSNotification *) Notification{
+
+    self.sanjiaoWidth.constant = 0;
+    
+}
+
+-(void)goEditDone:(NSNotification *)Notification{
+    self.sanjiaoWidth.constant = 15;
+}
+
+/**圆形图片裁剪*/
+- (UIImage *)wjf_circleImage:(UIImage *)image
+{
+    //利用self生成一张圆形图片
+    // 1.开启图形上下文
+    UIGraphicsBeginImageContextWithOptions(image.size,NO,0);
+    // 2.描述圆形路径
+    
+    UIBezierPath*path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(0,0,
+                                                                          image.size.width,image.size.height)];
+    // 3.设置裁剪区域
+    [path addClip];
+    // 4.画图
+    [image drawAtPoint:CGPointZero];
+    // 5.取出图片
+    UIImage*Newimage =UIGraphicsGetImageFromCurrentImageContext();
+    // 6.关闭上下文
+    UIGraphicsEndImageContext();
+    return Newimage;
+}
+
+-(void)updateUserInfo{
+    [_homeService requestUserAuthState];
+}
+
+//重新方法，设置宽度
+-(void)addItemForLeft:(LeftOrRight)leftorRight Title:(NSString *)title Titlecolor:(UIColor *)color action:(SEL)action spaceWidth:(CGFloat)width {
+    
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.titleLabel.font = [UIFont systemFontOfSize:14];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:color forState:UIControlStateNormal];
+    button.frame = CGRectMake(0, 0, autoScaleW(35), autoScaleH(44));
+    [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+    [button.titleLabel setTextAlignment:NSTextAlignmentCenter];
+    UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithCustomView:button];
+    
+    UIBarButtonItem *space = [[UIBarButtonItem alloc]
+                              initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace
+                              target:nil action:nil];
+    switch (leftorRight) {
+        case LeftBtn:{
+            self.navItem.leftBarButtonItems = @[space,item];
+        }
+            break;
+            
+        case RightBtn:{
+            self.navItem.rightBarButtonItems = @[space,item];
+        }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+@end

@@ -1,0 +1,29 @@
+//
+//  PrefixKey.pch
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/17.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#ifndef PrefixKey_pch
+#define PrefixKey_pch
+
+// appstore appleid
+#define kAppleID        @"1129173295"
+
+// 新浪微博appkey 5770f2c267e58ebf6c001349
+#define kWeiboAppkey    @"5770f2c267e58ebf6c001349"
+
+// 高德地图key
+#define kMapKey         @"02f5fb603eb9e990cc73d127e87f8d48"
+
+// 科大讯飞id
+#define APPID_VALUE     @"56fb3656"
+
+// 网络请求key
+#define kSignKey        @"ghOwfR7Wz44cbKU93KVSxwYXPGloNu"
+#define kNonceStr       [SignKeyUtil getNonceString]
+
+
+#endif /* PrefixKey_pch */

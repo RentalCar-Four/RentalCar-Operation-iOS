@@ -1,0 +1,298 @@
+//
+//  CarShowView.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/15.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "CarShowView.h"
+#import "StationItem.h"
+#import "CarItem.h"
+#import "LocationTransform.h"
+
+@interface CarShowView ()<UIScrollViewDelegate>
+{
+    UIView *_carView;
+    UILabel *_stationLab;
+    UILabel *_distanceLab;
+    UILabel *_tipLab;
+    UIButton *_useCarBtn;
+    UIScrollView *_scrollView;
+    UIPageControl *_pageControl;
+    
+    CarItem *_currentCarItem;
+}
+@end
+
+@implementation CarShowView
+
+- (instancetype)initWithFrame:(CGRect)frame{
+    
+    if (self = [super initWithFrame:frame]) {
+        
+        [self setUp];
+    }
+    
+    return  self;
+}
+
+- (void)setUp {
+    
+    self.frame = CGRectMake(autoScaleW(10), autoScaleH(667), autoScaleW(355), autoScaleH(310));
+    self.alpha = 0;
+    
+    _carView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.width, autoScaleH(257))];
+    _carView.backgroundColor = [UIColor whiteColor];
+    _carView.layer.cornerRadius = autoScaleW(10);
+    [APPUtil setViewShadowStyle:_carView];
+    [self addSubview:_carView];
+    
+    UILabel *getCarFlag = [[UILabel alloc] initWithFrame:CGRectMake(15, 0, autoScaleW(60), autoScaleH(48))];
+    getCarFlag.text = @"取车点";
+    getCarFlag.textColor = UIColorFromRGB(0xDCDCDC);
+    getCarFlag.font = [UIFont systemFontOfSize:12];
+    [_carView addSubview:getCarFlag];
+    
+    UIImageView *locateFlag = [[UIImageView alloc] initWithFrame:CGRectMake(getCarFlag.right, autoScaleH(19), 10, 10)];
+    locateFlag.image = [UIImage imageNamed:@"icon_PickLocation"];
+    [_carView addSubview:locateFlag];
+    
+    _stationLab = [[UILabel alloc] initWithFrame:CGRectMake(locateFlag.right+5, 0, autoScaleW(200), autoScaleH(48))];
+    _stationLab.text = @"五道口嘉园地面停车场";
+    _stationLab.font = [UIFont systemFontOfSize:13];
+    _stationLab.textColor = UIColorFromRGB(0x808080);
+    [_carView addSubview:_stationLab];
+    
+    _distanceLab = [[UILabel alloc] initWithFrame:CGRectMake(_stationLab.right, autoScaleH(17), 40, autoScaleH(16))];
+    _distanceLab.backgroundColor = UIColorFromRGB(0x939393);
+    _distanceLab.text = @"560M";
+    _distanceLab.textAlignment = NSTextAlignmentCenter;
+    _distanceLab.font = [UIFont systemFontOfSize:9];
+    _distanceLab.textColor = [UIColor whiteColor];
+    [_carView addSubview:_distanceLab];
+    
+    UILabel *rowLine = [[UILabel alloc] initWithFrame:CGRectMake(0, getCarFlag.bottom, _carView.width, 1)];
+    rowLine.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    [_carView addSubview:rowLine];
+    
+    _scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, getCarFlag.bottom, self.width, autoScaleH(209))];
+    _scrollView.pagingEnabled = YES;
+    _scrollView.bounces = NO;
+    _scrollView.delegate =self;
+    _scrollView.showsVerticalScrollIndicator = NO;
+    _scrollView.showsHorizontalScrollIndicator = NO;
+    [_carView addSubview:_scrollView];
+    
+    _pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(0, _carView.height-15, _scrollView.width, 4)];
+    [_pageControl addTarget:self action:@selector(chnageCar) forControlEvents:UIControlEventTouchUpInside];
+    [_carView addSubview:_pageControl];
+    [_pageControl setValue:[UIImage imageNamed:@"img_DotSelect"] forKey:@"_currentPageImage"];
+    [_pageControl setValue:[UIImage imageNamed:@"img_Dot"] forKey:@"_pageImage"];
+    
+    _useCarBtn = [[UIButton alloc] initWithFrame:CGRectMake(0, _carView.height+5, self.width, autoScaleH(48))];
+//    [[APPUtil share] setButtonClickStyle:_useCarBtn normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(10)];
+    
+    [[APPUtil share]setButtonClickStyle:_useCarBtn Shadow:YES normalBorderColor:0 selectedBorderColor:0 BorderWidth:0 normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(10)];
+    
+    [_useCarBtn setTitle:@"预约用车" forState:UIControlStateNormal];
+    _useCarBtn.titleLabel.font = [UIFont systemFontOfSize:autoScaleW(16)];
+    [_useCarBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [_useCarBtn addTarget:self action:@selector(useCarAction) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:_useCarBtn];
+    
+    _tipLab = [[UILabel alloc] initWithFrame:CGRectMake(0, autoScaleH(50), self.width, autoScaleH(65))];
+    _tipLab.hidden = YES;
+    _tipLab.text = @"该网点暂无车辆";
+    _tipLab.textColor = UIColorFromRGB(0xBBBBBB);
+    _tipLab.font = [UIFont systemFontOfSize:13];
+    _tipLab.textAlignment = NSTextAlignmentCenter;
+    [_carView addSubview:_tipLab];
+}
+
+//计费规则
+- (void)priceRuleAction {
+    
+    [StatisticsClass eventId:YC02];
+    
+    if ([self.delegate respondsToSelector:@selector(onClickWithCarPriceRuleEvent:)]) {
+        [self.delegate onClickWithCarPriceRuleEvent:_currentCarItem];
+    }
+}
+
+//预约用车
+- (void)useCarAction {
+    
+    [StatisticsClass eventId:YY04];
+    
+    _useCarBtn.backgroundColor = kBlueColor;
+    [_useCarBtn.layer setMasksToBounds:NO];
+    
+    if ([self.delegate respondsToSelector:@selector(onClickWithUseCarEvent:)]) {
+        [self.delegate onClickWithUseCarEvent:_currentCarItem];
+    }
+}
+
+- (void)setStationItem:(StationItem *)stationItem {
+    if (_stationItem!=stationItem) {
+        _stationItem = stationItem;
+    }
+    
+    _stationLab.text = _stationItem.stationName;
+}
+
+- (void)setUserLoc:(CLLocationCoordinate2D)userLoc {
+    
+    _userLoc = userLoc;
+
+    CLLocationCoordinate2D stationLoc = CLLocationCoordinate2DMake([_stationItem.gpsLat doubleValue], [_stationItem.gpsLng doubleValue]);
+    
+    MAMapPoint p1 = MAMapPointForCoordinate(stationLoc);
+    MAMapPoint p2 = MAMapPointForCoordinate(_userLoc);
+
+    CLLocationDistance distance =  MAMetersBetweenMapPoints(p1, p2);
+    
+    NSLog(@"胡椒粉放入个人1%f %f %f %f",[_stationItem.gpsLng doubleValue],[_stationItem.gpsLat doubleValue],_userLoc.longitude,_userLoc.latitude);
+    NSLog(@"胡椒粉放入个人2%f %f %f %f",stationLoc.longitude,stationLoc.latitude,_userLoc.longitude,_userLoc.latitude);
+    NSLog(@"飞鱼服股股骨1%f",distance);
+    
+    if (distance>999) {
+        
+        if (distance>10000) {
+            _distanceLab.text = @">10KM";
+        } else {
+            CGFloat kmValue = (CGFloat)distance/1000;
+            _distanceLab.text = [NSString stringWithFormat:@"%.1fKM",kmValue];
+        }
+        
+    } else {
+        _distanceLab.text = [NSString stringWithFormat:@"%0.0fM",distance];
+    }
+}
+
+- (void)setCarItems:(NSMutableArray *)carItems {
+    if (_carItems!=carItems) {
+        _carItems = carItems;
+    }
+    
+    if (carItems.count<=0) { //网点无车
+        
+        self.frame = CGRectMake(autoScaleW(10), autoScaleH(667), autoScaleW(355), autoScaleH(115));
+        _carView.frame = CGRectMake(0, 0, self.width, autoScaleH(115));
+        _scrollView.hidden = YES;
+        _useCarBtn.hidden = YES;
+        _tipLab.hidden = NO;
+        
+        return;
+    } else {
+        
+        _currentCarItem = self.carItems[0];
+        
+        self.frame = CGRectMake(autoScaleW(10), autoScaleH(667), autoScaleW(355), autoScaleH(310));
+        _carView.frame = CGRectMake(0, 0, self.width, autoScaleH(257));
+        _scrollView.hidden = NO;
+        _useCarBtn.hidden = NO;
+        _tipLab.hidden = YES;
+    }
+    
+    NSLog(@"网点车辆信息：%@",_carItems);
+    
+    _scrollView.contentSize = CGSizeMake(self.width*_carItems.count, autoScaleH(209));
+    _pageControl.numberOfPages = _carItems.count;
+    
+    //移除所有子视图
+    [_scrollView.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
+    
+    for (int i = 0; i< _carItems.count; i++) {
+        
+        CarItem *item = _carItems[i];
+        
+        _imgView = [[UIImageView alloc] initWithFrame:CGRectMake(self.width*i+(self.width-autoScaleW(160))/2, 0, autoScaleW(160), autoScaleW(108))];
+        _imgView.tag = 10000+i;
+        [_imgView setImage:[UIImage imageNamed:@"img_car"]];
+        [_imgView setContentMode:UIViewContentModeScaleAspectFill];
+        _imgView.clipsToBounds=YES;
+        _imgView.exclusiveTouch=YES;
+        _imgView.userInteractionEnabled = YES;
+        [_scrollView addSubview:_imgView];
+        
+        _carInfoView = [[UIView alloc] initWithFrame:CGRectMake(self.width*i, _imgView.bottom, self.width, autoScaleH(73))];
+        _carInfoView.tag = 100000+i;
+        [_scrollView addSubview:_carInfoView];
+        
+        if (i == 0) {
+            _imgView.alpha = 0;
+            _imgView.top = 20;
+            _carInfoView.alpha = 0;
+            _carInfoView.top = _imgView.bottom-5;
+        }
+        
+        NSArray *titleArr = @[@"可续航里程",@"计价规则",@"车辆牌号"];
+        
+        for (int j = 0; j<3; j++) {
+            UILabel *titleLab = [[UILabel alloc] initWithFrame:CGRectMake(self.width/3*j, autoScaleH(8), self.width/3, autoScaleH(20))];
+            titleLab.text = titleArr[j];
+            titleLab.font = [UIFont systemFontOfSize:12];
+            titleLab.textColor = UIColorFromRGB(0xDCDCDC);
+            titleLab.textAlignment = NSTextAlignmentCenter;
+            [_carInfoView addSubview:titleLab];
+            
+            UIView *colLine = [[UIView alloc] initWithFrame:CGRectMake(self.width/3*(j+1), autoScaleH(24), 1, autoScaleH(27))];
+            colLine.backgroundColor = UIColorFromRGB(0xF5F5F5);
+            [_carInfoView addSubview:colLine];
+            
+            UILabel *contentLab = [[UILabel alloc] initWithFrame:CGRectMake(self.width/3*j, titleLab.bottom, self.width/3, autoScaleH(48))];
+            contentLab.textAlignment = NSTextAlignmentCenter;
+            contentLab.textColor = UIColorFromRGB(0xDCDCDC);
+            contentLab.font = [UIFont systemFontOfSize:14];
+            [_carInfoView addSubview:contentLab];
+            
+            if (j==0) {
+                NSMutableAttributedString *attributedStr = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"%@KM",item.remainingKm]];
+                [attributedStr addAttribute:NSFontAttributeName value:kAvantiBoldSize(13) range:NSMakeRange(0, attributedStr.length-2)];
+                [attributedStr addAttribute:NSForegroundColorAttributeName value:UIColorFromRGB(0x25D880) range:NSMakeRange(0, attributedStr.length-2)];
+                [attributedStr addAttribute:NSFontAttributeName value:kAvantiBoldSize(1) range:NSMakeRange(attributedStr.length-2, 2)];
+                [attributedStr addAttribute:NSForegroundColorAttributeName value:UIColorFromRGB(0xDCDCDC) range:NSMakeRange(attributedStr.length-2, 2)];
+                contentLab.attributedText = attributedStr;
+            }
+            
+            if (j==1) {
+                NSMutableAttributedString *attributedStr = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"￥%@/分",item.pricePerMinute]];
+                [attributedStr addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:16] range:NSMakeRange(0, 1)];
+                [attributedStr addAttribute:NSFontAttributeName value:kAvantiBoldSize(13) range:NSMakeRange(1, attributedStr.length-3)];
+                [attributedStr addAttribute:NSForegroundColorAttributeName value:UIColorFromRGB(0x25D880) range:NSMakeRange(1, attributedStr.length-3)];
+                contentLab.attributedText = attributedStr;
+            }
+            
+            if (j==2) {
+                contentLab.textColor = kBlueColor;
+                contentLab.font = kAvantiBoldSize(1);
+                contentLab.text = item.numberPlate;
+            }
+        }
+        
+        UIButton *priceRuleBtn = [[UIButton alloc] initWithFrame:CGRectMake(self.width/3, 0, self.width/3, autoScaleH(73))];
+        priceRuleBtn.backgroundColor = [UIColor clearColor];
+        [priceRuleBtn addTarget:self action:@selector(priceRuleAction) forControlEvents:UIControlEventTouchUpInside];
+        [_carInfoView addSubview:priceRuleBtn];
+    }
+}
+
+- (void)chnageCar {
+//    [_scrollView setContentOffset:CGPointMake(_pageControl.currentPage*self.width, 0) animated:YES];
+//    _currentCarItem = self.carItems[_pageControl.currentPage];
+}
+
+#pragma mark - UIScrollViewDelegate协议
+//减速滑动(Decelerating:使减速的)
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    [StatisticsClass eventId:SY05];
+    
+    int currentPage = round(fabs(scrollView.contentOffset.x)/self.width); //计算当前页
+    _pageControl.currentPage = currentPage;
+    _currentCarItem = self.carItems[_pageControl.currentPage];
+    
+    NSLog(@"滑动到第几页：%d  %@",currentPage,_currentCarItem.vin);
+}
+
+@end

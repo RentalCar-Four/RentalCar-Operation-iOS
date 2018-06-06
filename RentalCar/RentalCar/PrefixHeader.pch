@@ -1,0 +1,45 @@
+//
+//  PrefixHeader.pch
+//  XDYLease3
+//
+//  Created by hu on 16/8/4.
+//  Copyright (c) 2015年 com.xdy. All rights reserved.
+//
+
+#ifndef XDYLease3_PrefixHeader_pch
+#define XDYLease3_PrefixHeader_pch
+
+#import "PrefixPublic.pch"
+#import "PrefixKey.pch"
+#import "PrefixCacher.pch"
+#import "PrefixAppInfo.pch"
+#import "AFNetworking.h"
+#import "SVProgressHUD.h"
+#import "UIColor+Utils.h"
+#import <Masonry.h>
+#import <IQKeyboardManager.h>
+#import "UIView+Addition.h"
+#import "SDWebImageManager.h"
+#import "SDImageCache.h"
+#import "CustomAlertView.h"
+#import "BaseController.h"
+#import "XDYAlertView.h"
+#import "UMMobClick/MobClick.h"
+#import "StatisticsClass.h"
+#import "StatisticsConstants.h"
+#import "JHHJView.h"
+#import "UserOther.h"
+//常用的分类
+#import "UIImageView+WebCache.h"
+#import "UIButton+WebCache.h"
+#import "UIImage+bgLay.h"
+#import "AppDelegate.h"
+#import "UIImage+Crop.h"
+#import "UIImage+Rotate.h"
+#import "NSString+Extension.h"
+#import "UserInfo.h"
+#import "UIAlertController+Blocks.h"
+#import "JZLocationConverter.h"
+#import "AreaInfo.h"
+
+#endif

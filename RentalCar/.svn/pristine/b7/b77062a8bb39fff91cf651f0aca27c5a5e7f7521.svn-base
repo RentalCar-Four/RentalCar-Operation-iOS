@@ -1,0 +1,68 @@
+//
+//  HomeMapView.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/26.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseView.h"
+#import "StationItem.h"
+#import <MAMapKit/MAMapKit.h>
+#import <AMapFoundationKit/AMapFoundationKit.h>
+#import <AMapLocationKit/AMapLocationManager.h>
+#import "MANaviRoute.h"
+#import "CarAnnotationView.h"
+#import "LocationTransform.h"
+#import "BookingItem.h"
+#import "CarPointAnnotation.h"
+
+@protocol HomeMapDelegate <NSObject>
+
+@optional
+- (void)onClickWithScanUseCarEvent; //扫码用车
+- (void)returnReGeocodeCityResult:(NSMutableDictionary *)dic; //反地理编码定位城市
+- (void)singleTappedMapView; //单击地图
+- (void)userMoveMapViewEnd:(LocationTransform *)afterLocation withRadius:(NSString *)radius; //用户移动地图结束
+
+- (void)selectAnnotationView:(StationItem *)stationItem andCarArr:(NSMutableArray *)carArr;
+- (void)deselectAnnotationView; //不选中标注
+- (void)routeSearchFail; //路线规划失败
+- (void)routeSearchSuccess; //路线规划成功
+- (void)locationSuccess:(LocationTransform *)afterLocation withRadius:(NSString *)radius; //定位成功
+
+@end
+
+@interface HomeMapView : BaseView
+
+@property (nonatomic,weak) id<HomeMapDelegate> delegate;
+
+@property (nonatomic,retain) UIView *tipView; //提示视图
+@property (nonatomic,retain) UILabel *tipTitleLab; //提示内容
+@property (nonatomic,retain) UIImageView *locationBtn; //定位
+@property (nonatomic,retain) UIButton *clickLocateBtn;
+@property (nonatomic,retain) UIButton *scanUseCarBtn; //扫码用车
+
+@property (nonatomic,retain) MAMapView *mapView; //高德地图
+@property (nonatomic,retain) AMapLocationManager *locationManager; //定位管理者
+@property (nonatomic,retain) CLLocation *userLocation; //用户当前的位置
+@property (nonatomic,retain) MANaviRoute *naviRoute; //路线规划路线
+@property (nonatomic,retain) CarAnnotationView *carAnnoView; //当前选中的标注
+@property (nonatomic,retain) CarPointAnnotation *anno;
+@property (nonatomic,retain) NSMutableArray *stationArr; //站点标注
+@property (nonatomic,retain) StationItem *stationItem; //当前选中的站点
+@property (nonatomic,assign) BOOL forbidAnnoClick; //标注是否可以点击
+@property (nonatomic,retain) NSString *stationRadius;
+
+- (void)setDelegate;
+- (void)clearDelegate;
+
+- (void)mapRouteLarge:(NSMutableArray *)array; //路线规划缩放
+
+- (void)showCarRoute:(BookingItem *)item; //显示车的路线规划
+
+- (void)removeSelectAnno; //移除选中标注
+
+- (void)removeAllAnnos; //移除所有标注
+
+@end

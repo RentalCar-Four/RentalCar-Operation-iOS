@@ -1,0 +1,210 @@
+//
+//  CarReturnConfirmView.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/28.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "CarReturnConfirmView.h"
+#import "CommonRequest.h"
+#import "UrlConfig.h"
+
+@interface CarReturnConfirmView ()
+{
+    UILabel *_moneyLab; //预估费用
+    
+    UIButton *_couponBtn; //优惠券
+    UIButton *_cancelBookingBtn; //取消预约
+    UIButton *_unlockCarBtn; //开锁用车
+    
+    NSArray *_dataArr;
+}
+@end
+
+@implementation CarReturnConfirmView
+
+- (instancetype)initWithFrame:(CGRect)frame{
+    
+    if (self = [super initWithFrame:frame]) {
+        
+        _dataArr = @[@"停放至还车点",@"确认拉起手刹",@"关闭车辆电源",@"关闭车门车窗"];
+        
+        [self setUp];
+    }
+    
+    return  self;
+}
+
+- (void)setUp {
+    
+    self.frame = CGRectMake(autoScaleW(10), autoScaleH(667), autoScaleW(355), autoScaleH(310));
+    self.backgroundColor = [UIColor whiteColor];
+    self.layer.cornerRadius = autoScaleW(10);
+    [APPUtil setViewShadowStyle:self];
+    self.alpha = 0;
+    
+    UIView *topView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.width, autoScaleH(120))];
+    topView.backgroundColor = UIColorFromRGB(0xFCFCFC);
+    UIBezierPath *maskPath = [UIBezierPath bezierPathWithRoundedRect:topView.bounds byRoundingCorners:UIRectCornerTopLeft | UIRectCornerTopRight cornerRadii:CGSizeMake(autoScaleW(10),autoScaleW(10))];
+    CAShapeLayer *maskLayer = [[CAShapeLayer alloc] init];
+    maskLayer.frame = topView.bounds;
+    maskLayer.path = maskPath.CGPath;
+    topView.layer.mask = maskLayer;
+    [self addSubview:topView];
+    
+    UILabel *flagLab = [[UILabel alloc] initWithFrame:CGRectMake(autoScaleW(75), autoScaleH(25), autoScaleW(200), autoScaleH(16))];
+    flagLab.text = @"还车前请确认以下事项:";
+    flagLab.textColor = UIColorFromRGB(0x808080);
+    flagLab.font = [UIFont boldSystemFontOfSize:autoScaleH(15)];
+    [topView addSubview:flagLab];
+    
+    UIImageView *logoImgView = [[UIImageView alloc] initWithFrame:CGRectMake(self.width-autoScaleW(72), 0, autoScaleW(72), autoScaleW(72))];
+    logoImgView.image = [UIImage imageNamed:@"img_ReturnTips"];
+    [topView addSubview:logoImgView];
+    
+    _Lab1 = [[UILabel alloc] initWithFrame:CGRectMake(autoScaleW(75), flagLab.bottom+autoScaleH(18), autoScaleW(100), autoScaleH(15))];
+    _Lab1.textColor = UIColorFromRGB(0x969696);
+    _Lab1.font = [UIFont systemFontOfSize:autoScaleW(14)];
+    _Lab1.text = _dataArr[0];
+    [topView addSubview:_Lab1];
+    
+    _Lab2 = [[UILabel alloc] initWithFrame:CGRectMake(_Lab1.right, _Lab1.top, autoScaleW(100), autoScaleH(15))];
+    _Lab2.textColor = UIColorFromRGB(0x969696);
+    _Lab2.font = [UIFont systemFontOfSize:autoScaleW(14)];
+    _Lab2.text = _dataArr[1];
+    [topView addSubview:_Lab2];
+    
+    _Lab3 = [[UILabel alloc] initWithFrame:CGRectMake(autoScaleW(75), _Lab1.bottom+autoScaleH(9), autoScaleW(100), autoScaleH(15))];
+    _Lab3.textColor = UIColorFromRGB(0x969696);
+    _Lab3.font = [UIFont systemFontOfSize:autoScaleW(14)];
+    _Lab3.text = _dataArr[2];
+    [topView addSubview:_Lab3];
+    
+    _Lab4 = [[UILabel alloc] initWithFrame:CGRectMake(_Lab3.right, _Lab3.top, autoScaleW(100), autoScaleH(15))];
+    _Lab4.textColor = UIColorFromRGB(0x969696);
+    _Lab4.font = [UIFont systemFontOfSize:autoScaleW(14)];
+    _Lab4.text = _dataArr[3];
+    [topView addSubview:_Lab4];
+    
+    UILabel *rowLine = [[UILabel alloc] initWithFrame:CGRectMake(0, topView.bottom, self.width, 1)];
+    rowLine.backgroundColor = UIColorFromRGB(0xF6F6F6);
+    [self addSubview:rowLine];
+    
+    //多了10
+    UILabel *tipLable = [[UILabel alloc] initWithFrame:CGRectMake(autoScaleW(5), rowLine.bottom+autoScaleH(25), self.width, autoScaleH(19))];
+    tipLable.text = @"费用预估（元）";
+    tipLable.textColor = UIColorFromRGB(0xC5C5C5);
+    tipLable.font = [UIFont systemFontOfSize:autoScaleW(13)];
+    tipLable.textAlignment = NSTextAlignmentCenter;
+    [self addSubview:tipLable];
+    
+    _moneyLab = [[UILabel alloc] initWithFrame:CGRectMake(0, rowLine.bottom+autoScaleH(55), self.width, autoScaleH(36))];
+    _moneyLab.text = @"0.0";
+    _moneyLab.font = kAvantiBoldSize(21);
+    _moneyLab.textColor = kBlueColor;
+    _moneyLab.textAlignment = NSTextAlignmentCenter;
+    [self addSubview:_moneyLab];
+    
+    //优惠券
+    _couponBtn = [[UIButton alloc] initWithFrame:CGRectMake(autoScaleW(50), _moneyLab.bottom+autoScaleH(5), self.width-autoScaleW(50)*2, 20)];
+//    _couponBtn.hidden = YES;
+    [_couponBtn setTitle:@"优惠券将自动抵扣" forState:UIControlStateNormal];
+    [_couponBtn setTitleColor:UIColorFromRGB(0x8D8D8D) forState:UIControlStateNormal];
+    _couponBtn.titleLabel.font = [UIFont systemFontOfSize:autoScaleW(12)];
+//    [_couponBtn setImage:[UIImage imageNamed:@"icon_TicketArrow"] forState:UIControlStateNormal];
+//    [_couponBtn setImageEdgeInsets:UIEdgeInsetsMake(0.0, autoScaleW(155), 0.0, 0.0)];
+//    [_couponBtn setTitleEdgeInsets:UIEdgeInsetsMake(0.0, 0.0, 0.0, autoScaleW(25))];
+    [self addSubview:_couponBtn];
+    
+    //返回
+    _cancelBookingBtn = [[UIButton alloc] initWithFrame:CGRectMake(autoScaleW(8), self.height-autoScaleH(56), autoScaleW(110), autoScaleH(48))];
+    _cancelBookingBtn.backgroundColor = UIColorFromRGB(0xFCFCFC);
+    _cancelBookingBtn.layer.cornerRadius = autoScaleW(5);
+    _cancelBookingBtn.layer.borderWidth = 1;
+    _cancelBookingBtn.layer.borderColor = UIColorFromRGB(0xE7EDEA).CGColor;
+    [_cancelBookingBtn setTitle:@"返回" forState:UIControlStateNormal];
+    _cancelBookingBtn.titleLabel.font = [UIFont systemFontOfSize:autoScaleW(16)];
+    [_cancelBookingBtn setTitleColor:UIColorFromRGB(0x9F9F9F) forState:UIControlStateNormal];
+    [_cancelBookingBtn addTarget:self action:@selector(backRunningAction) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:_cancelBookingBtn];
+    
+    //确认还车
+    _unlockCarBtn = [[UIButton alloc] initWithFrame:CGRectMake(_cancelBookingBtn.right+5, self.height-autoScaleH(56), autoScaleW(225), autoScaleH(48))];
+    [[APPUtil share]setButtonClickStyle:_unlockCarBtn Shadow:YES normalBorderColor:0 selectedBorderColor:0 BorderWidth:0 normalColor:kBlueColor selectedColor:UIColorFromRGB(0x09C58A) cornerRadius:autoScaleW(5)];
+    
+    [_unlockCarBtn setTitle:@"确认还车" forState:UIControlStateNormal];
+    _unlockCarBtn.titleLabel.font = [UIFont systemFontOfSize:autoScaleW(16)];
+    [_unlockCarBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [_unlockCarBtn addTarget:self action:@selector(confirmReturnAction) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:_unlockCarBtn];
+}
+
+- (void)recoverView {
+    
+    self.Lab1.textColor = UIColorFromRGB(0x969696);
+    self.Lab2.textColor = UIColorFromRGB(0x969696);
+    self.Lab3.textColor = UIColorFromRGB(0x969696);
+    self.Lab4.textColor = UIColorFromRGB(0x969696);
+}
+
+- (void)setBookingItem:(BookingItem *)bookingItem {
+    
+    if (_bookingItem!=bookingItem) {
+        _bookingItem = bookingItem;
+    }
+    
+    [self getData];
+    
+}
+
+- (void)getData {
+    
+//    //获取还车时检查项
+//    NSDictionary *paramDic1 = [NSDictionary dictionaryWithObjectsAndKeys:self.bookingItem.rentNum,@"rentNum",nil];
+//    
+//    [[CommonRequest shareRequest] requestWithPost:getChekItemForReturnCar() isCovered:NO parameters:paramDic1 success:^(id data) {
+//        
+//        NSArray *result = data[@"result"][@"list"];
+//        
+//        
+//    } failure:^(NSString *code) {
+//        
+//    }];
+    
+    //获取租赁中车辆预估租金
+    NSDictionary *paramDic2 = [NSDictionary dictionaryWithObjectsAndKeys:self.bookingItem.rentNum,@"rentNum",nil];
+    
+    [[CommonRequest shareRequest] requestWithPost:getEstimateLeaseFee() isCovered:NO parameters:paramDic2 success:^(id data) {
+        
+        NSDictionary *result = data[@"result"];
+        _moneyLab.text = result[@"leaseMoney"];
+        
+    } failure:^(NSString *code) {
+    
+    }];
+}
+
+#pragma mark - methods
+
+//返回到行程中
+- (void)backRunningAction {
+    if ([self.delegate respondsToSelector:@selector(onClickWithCancelReturnCarEvent:)]) {
+        [self.delegate onClickWithCancelReturnCarEvent:self.bookingItem];
+    }
+}
+
+//确认还车
+- (void)confirmReturnAction {
+    
+    [StatisticsClass eventId:HC02];
+    
+    _unlockCarBtn.backgroundColor = kBlueColor;
+    [_unlockCarBtn.layer setMasksToBounds:NO];
+    
+    if ([self.delegate respondsToSelector:@selector(onClickWithConfirmReturnCarEvent:)]) {
+        [self.delegate onClickWithConfirmReturnCarEvent:self.bookingItem];
+    }
+}
+
+@end

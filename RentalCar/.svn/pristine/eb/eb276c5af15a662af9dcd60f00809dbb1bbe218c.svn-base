@@ -1,0 +1,21 @@
+//
+//  CarItem.h
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/9.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "BaseItem.h"
+
+@interface CarItem : BaseItem
+
+@property(nonatomic,copy)NSString * pricePerMinute; //每分钟多少钱
+@property(nonatomic,copy)NSString * priceDtlUrl; //计费规则
+@property(nonatomic,copy)NSString * vin; //车架号
+@property(nonatomic,copy)NSString * numberPlate; //车牌号
+@property(nonatomic,copy)NSString * vehicleModels; //车辆型号
+@property(nonatomic,copy)NSString * soc; //电量
+@property(nonatomic,copy)NSString * remainingKm; //续航里程
+
+@end

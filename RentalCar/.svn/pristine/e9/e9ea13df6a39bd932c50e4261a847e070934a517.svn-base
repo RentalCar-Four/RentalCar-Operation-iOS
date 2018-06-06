@@ -1,0 +1,376 @@
+//
+//  XDYHomeService.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/7.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "XDYHomeService.h"
+#import "UserInfo.h"
+
+@implementation XDYHomeService
+
+- (void)requestUserAuthState{
+    
+    NSDictionary *param = [NSDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithPost:getAuthUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSLog(@"会员状态信息：%@",data[@"result"]);
+        
+        UserInfo *info = [UserInfo yy_modelWithJSON:data[@"result"]];
+        
+        NSMutableDictionary *userDic = [[[NSUserDefaults standardUserDefaults] objectForKey:@"UserInfo"] mutableCopy];
+        if (!userDic) {
+            userDic = [NSMutableDictionary dictionary];
+        }
+        [userDic setObject:info.memberId forKey:@"memberId"];
+        [userDic setObject:info.mobile forKey:@"mobile"];
+        [userDic setObject:info.nickName forKey:@"nickName"];
+        [userDic setObject:info.auditStatus forKey:@"auditStatus"];
+        [userDic setObject:info.auditRemark forKey:@"auditRemark"];
+        [userDic setObject:info.memberStatus forKey:@"memberStatus"];
+        [userDic setObject:info.accountStatus forKey:@"accountStatus"];
+        [userDic setObject:info.autoAuditstate forKey:@"autoAuditstate"];
+        [userDic setObject:info.depositToPay forKey:@"depositToPay"];
+        NSString *headImgUrl = [self requestWithPostDownloadHeadImgWithService:param];
+        [userDic setObject:headImgUrl forKey:@"headImgUrl"];
+        [[UserInfo share] setUserInfo:userDic];
+        
+        [[SDWebImageManager sharedManager] downloadImageWithURL:[NSURL URLWithString:headImgUrl] options:0 progress:^(NSInteger receivedSize, NSInteger expectedSize) {
+            
+        } completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished, NSURL *imageURL) {
+            
+            [[SDImageCache sharedImageCache] storeImage:image forKey:@"headImg" toDisk:YES];
+            [self onSuccMessage:data withType: _REQUEST_AUTHSTATE_OK];
+        }];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_AUTHSTATE_];
+        
+    }];
+}
+
+- (void)requestCityToAreaWithService:(NSDictionary *)param {
+    [[CommonRequest shareRequest] requestWithPost:getCityToAreaUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"] withType:_REQUEST_CityToArea_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_CityToArea_];
+        
+    }];
+}
+
+//获取区域列表
+- (void)requestGetAreaListWithService{
+    
+    [[CommonRequest shareRequest] requestWithGet:getAreaListUrl() parameters:nil success:^(id data) {
+        
+    } failure:^(NSString *code) {
+        
+    }];
+}
+
+- (void)requestStationForLeaseWithService:(NSDictionary *)param{
+    
+    [[CommonRequest shareRequest] requestWithPost:getStationForLeaseUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *stationArr = [NSArray yy_modelArrayWithClass:[StationItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:stationArr withType:_REQUEST_STATIONFORLEASE_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_STATIONFORLEASE_];
+        
+    }];
+    
+}
+
+- (void)requestStationCarListWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getStationCarListUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *carArr = [NSArray yy_modelArrayWithClass:[CarItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:carArr withType:_REQUEST_STATIONCarList_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_STATIONCarList_];
+        
+    }];
+    
+}
+
+- (void)requestStationForReturnWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getStationForReturnUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *stationArr = [NSArray yy_modelArrayWithClass:[StationItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:stationArr withType:_REQUEST_STATIONFORLEASE_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_STATIONFORLEASE_];
+        
+    }];
+}
+
+- (void)requestCarInBookingWithService {
+    
+    NSDictionary *param = [NSDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithPost:getCarInBookingUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *bookingCarArr = [NSArray yy_modelArrayWithClass:[BookingItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:bookingCarArr withType:_REQUEST_CarInBooking_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_CarInBooking_];
+        
+    }];
+}
+
+- (void)requestCarInSearchInfoWithService {
+    
+    NSDictionary *param = [NSDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithPost:getCarInSearchInfoUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        NSLog(@"扫码车辆信息：%@",result);
+        
+        NSArray *bookingCarArr = [NSArray yy_modelArrayWithClass:[BookingItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:bookingCarArr withType:_REQUEST_CarInSearchInfo_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_CarInSearchInfo_];
+        
+    }];
+}
+
+- (void)requestCarInLeaseWithService {
+    
+    NSDictionary *param = [NSDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithPost:getCarInLeaseUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *bookingCarArr = [NSArray yy_modelArrayWithClass:[BookingItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:bookingCarArr withType:_REQUEST_CarInLease_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_CarInLease_];
+        
+    }];
+}
+
+- (void)requestCancelBookingCarWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getCancelBookingCarUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"] withType:_REQUEST_CancelBookingCar_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_CancelBookingCar_];
+        
+    }];
+}
+
+- (void)requestSearchStationWithService:(NSDictionary *)param {
+    [[CommonRequest shareRequest] requestWithPost:getSearchStationUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        NSArray *stationArr = [NSArray yy_modelArrayWithClass:[StationItem class] json:result[@"result"][@"list"]];
+        
+        [self onSuccMessage:stationArr withType:_REQUEST_SEARCHSTATION_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_SEARCHSTATION_];
+        
+    }];
+}
+
+- (void)requestSearchCarForLeaseWithService:(NSDictionary *)param {
+    [[CommonRequest shareRequest] requestWithPost:getSearchCarForLeaseUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        NSLog(@"扫码结果：%@",result);
+        
+        ScanCarInfoItem *item = [ScanCarInfoItem yy_modelWithJSON:result[@"result"]];
+        
+        [self onSuccMessage:item withType:_REQUEST_SearchCarForLease_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_SearchCarForLease_];
+        
+    }];
+}
+
+- (void)requestGetRentPwdService {
+    NSDictionary *param = [NSDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithPost:getRentPwd()isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"][@"rentPwd"] withType:_REQUEST_GetRentPwd_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_GetRentPwd_];
+        
+    }];
+}
+
+- (void)requestOpenOrCloseLeaseCarWithService:(NSDictionary *)param {
+    
+    NSString *actionStr = param[@"action"];
+    
+    [[CommonRequest shareRequest] requestWithPost:getOpenOrCloseLeaseCarUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        if ([actionStr isEqualToString:@"1"]) {
+            [TipUtil showSuccTip:@"关车门成功"];
+        } else {
+            [TipUtil showSuccTip:@"开车门成功"];
+        }
+        
+        [self onSuccMessage:result withType:_REQUEST_DEFAULT_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_DEFAULT_];
+        
+    }];
+}
+
+- (void)requestReturnCarWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getReturnCarUrl() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"] withType:_REQUEST_ReturnCar_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_ReturnCar_];
+        
+    }];
+}
+
+
+- (void)requestgetServicePhoneWithService {
+    NSDictionary *param = [NSDictionary dictionary];
+    [[CommonRequest shareRequest] requestWithPost:getServicePhoneUrl()isCovered:NO parameters:param success:^(id data) {
+        
+        
+        [self onSuccMessage:data withType:_REQUEST_GeterSvicePhone_];
+        
+    } failure:^(NSString *code) {
+        
+        
+    }];
+}
+
+
+- (void)requestgetAppVersionWithService {
+    NSMutableDictionary *param = [NSMutableDictionary dictionary];
+    NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
+    NSString *appCurVersion = [infoDictionary objectForKey:@"CFBundleShortVersionString"];
+    debugLog(@"当前应用软件版本:%@",appCurVersion);
+    NSString *buildNum = [infoDictionary objectForKey:@"CFBundleVersion"];
+    debugLog(@"当前应用build软件版本:%@",buildNum);
+    
+    [param setValue:appCurVersion forKey:@"versioncode"];
+    [param setValue:buildNum forKey:@"buildnumber"];
+    [param setValue:@"2" forKey:@"type"];
+    [[CommonRequest shareRequest] requestWithGet:getAppVersionUrl() parameters:param success:^(NSDictionary *data) {
+        NSDictionary *result = [data objectForKey:@"result"];
+       [self onSuccMessage:result withType:_REQUEST_getAppVersion_];
+    } failure:^(NSString *content) {
+        debugLog(@"%@",content);
+        
+    }];
+}
+
+- (void)requestChekItemForReturnCarWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getChekItemForReturnCar() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"][@"list"] withType:_REQUEST_ChekItemForReturnCar_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_ChekItemForReturnCar_];
+        
+    }];
+}
+
+- (void)requestEstimateLeaseFeeWithService:(NSDictionary *)param {
+    
+    [[CommonRequest shareRequest] requestWithPost:getEstimateLeaseFee() isCovered:NO parameters:param success:^(id data) {
+        
+        NSDictionary *result = data;
+        
+        [self onSuccMessage:result[@"result"] withType:_REQUEST_ChekItemForReturnCar_];
+        
+    } failure:^(NSString *code) {
+        
+        [self onFailMessageWithType:_REQUEST_ChekItemForReturnCar_];
+        
+    }];
+}
+
+//请求用户头像
+- (NSString *)requestWithPostDownloadHeadImgWithService:(NSDictionary *)param{
+    
+    NSString *PicUrl = [[CommonRequest shareRequest] requestWithPostDownloadPic:downloadHeadImg() parameters:param];
+    
+    return PicUrl;
+}
+
+- (void)requestGetNumberPlatePrefixWithService {
+    
+    NSMutableDictionary *param = [NSMutableDictionary dictionary];
+    
+    [[CommonRequest shareRequest] requestWithGet:getNumberPlatePrefix() parameters:param success:^(NSDictionary *data) {
+        
+        NSDictionary *result = [data objectForKey:@"result"];
+        [self onSuccMessage:result[@"list"] withType:_REQUEST_getAppVersion_];
+    } failure:^(NSString *content) {
+        debugLog(@"%@",content);
+        
+    }];
+}
+
+@end

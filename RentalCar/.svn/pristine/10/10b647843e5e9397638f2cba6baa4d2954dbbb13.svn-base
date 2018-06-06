@@ -1,0 +1,190 @@
+//
+//  ViewController.m
+//  RentalCar
+//
+//  Created by hu on 17/3/1.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "XDYLoginController.h"
+#import "XDYLoginService.h"
+#import "XDYLoginView.h"
+#import "XDYProtocolController.h"
+#import "LoginAreaList.h"
+#import "CacherUtil.h"
+#import "XDYPickerView.h"
+#import "XDYHomeService.h"
+#import "BaseWebController.h"
+
+@interface XDYLoginController ()<ObserverServiceDelegate,XDYLoginDelegate>
+{
+    XDYLoginView *loginView;
+    XDYLoginService *service;
+    LoginAreaList*arealist;
+    NSArray *arealistArr;
+    XDYPickerView *areaListPickview;
+
+    XDYHomeService *_stateService;
+}
+
+
+
+@end
+
+@implementation XDYLoginController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _stateService = [[XDYHomeService alloc] init];
+    _stateService.serviceDelegate = self;
+    
+    [self setUp];
+    
+    self.view.backgroundColor = UIColorFromRGB(0xFBFBFB);
+    
+}
+
+- (void)setUp{
+    
+    self.title = @"登录";
+
+    loginView = [[XDYLoginView alloc]init];
+    loginView.loginDelegate = self;
+    [self.view addSubview:loginView];
+    
+    service = [[XDYLoginService alloc]init];
+    service.serviceDelegate = self;
+}
+
+//验证
+- (void)onClickWithValidateEvent:(NSString *)phone{
+    
+    [service requestValidateWithService:phone];
+    
+}
+
+
+//登录
+- (void)onClickWithLoginEvent:(LoginParamItem *)item{
+    
+    [self.view endEditing:YES];
+    
+     [service requestLoginWithService:item];
+
+}
+
+//电子协议
+- (void)onOptionWithProtocolEvent{
+    [BaseWebController showWithContro:self withUrlStr:MemberAgreementUrl withTitle:@"租赁协议" isPresent:YES];
+}
+
+
+- (void)onSuccess:(id)data withType:(ActionType)type{
+    
+    switch (type) {
+            
+        case _REQUEST_VALIDATE_:
+        {
+            if ([[data objectForKey:@"status"] isEqualToString:@"1"]) {
+                
+                [TipUtil showSuccTip:@"发送验证码成功"];
+                [loginView resetValidateCode];
+            }
+            //TODO
+            //如果是注册账号，显示选择区域
+          NSDictionary * result =  [data objectForKey:@"result"];
+            [result objectForKey:@"needAreaId"];
+            
+            if ([[result objectForKey:@"needAreaId"] isEqualToString:@"1"]) {
+                [service requestGetAreaListWithService];
+
+                [loginView showAreaView:YES];
+                
+            }else{
+                
+                [loginView showAreaView:NO];
+            }
+            
+//            [loginView notifyStopTimer];
+        }
+            break;
+            
+        case _REQUEST_LOGIN_:
+        {
+        
+            [self excuteLoginItem:data];
+        }
+            
+            break;
+            
+        default:
+            break;
+    }
+    
+}
+-(void)onarealist:(UIButton *)button{
+    
+     areaListPickview = [XDYPickerView pickerView];
+     areaListPickview.array = arealistArr;
+    [self.view addSubview:areaListPickview];
+    [areaListPickview show];
+    
+}
+
+-(void)onSuccess:(id)data{
+    if (data == [NSNull null]) {
+        [CustomAlertView alertWithMessage:@"返回数据为空"];
+        return;
+    }
+    arealistArr = [data objectForKey:@"list"];
+    debugLog(@"%@",arealistArr);
+    
+}
+
+
+- (void)onFailureWithType:(ActionType)type{
+    
+    switch (type) {
+        case _REQUEST_VALIDATE_:
+        case _REQUEST_LOGIN_:
+        {
+            [loginView notifyStopTimer];
+        }
+            
+            break;
+            
+        default:
+            break;
+    }
+}
+
+
+- (void)excuteLoginItem:(id)data{
+    debugLog(@"%@",data);
+    //TODO
+    
+    [_stateService requestUserAuthState]; //验证会员状态
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:kLoginSuccNotification object:nil];
+    
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)backAction {
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)dealloc{
+    
+
+    loginView = nil;
+    service = nil;
+}
+
+#pragma mark - pickerView代理
+
+
+
+
+@end

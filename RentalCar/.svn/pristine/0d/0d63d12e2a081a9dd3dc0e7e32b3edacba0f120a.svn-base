@@ -1,0 +1,13 @@
+//
+//  CarItem.m
+//  RentalCar
+//
+//  Created by zhanbing han on 17/3/9.
+//  Copyright © 2017年 xyx. All rights reserved.
+//
+
+#import "CarItem.h"
+
+@implementation CarItem
+
+@end
